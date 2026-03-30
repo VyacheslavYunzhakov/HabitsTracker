@@ -82,8 +82,9 @@ fun VerticalCalendarList(
     val listState = rememberLazyListState()
 
     val density = LocalDensity.current
-
-    val containerWidthDp = LocalWindowInfo.current.containerSize.width.dp
+    val containerWidthDp = with(density) {
+        LocalWindowInfo.current.containerSize.width.toDp()
+    }
 
     val horizontalPadding = CalendarDefaults.CardPadding * 2
     val cellSize = (containerWidthDp - horizontalPadding) / 7
