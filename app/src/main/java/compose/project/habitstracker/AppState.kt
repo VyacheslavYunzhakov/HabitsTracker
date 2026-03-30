@@ -1,4 +1,4 @@
-package compose.project.habbitstracker
+package compose.project.habitstracker
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember

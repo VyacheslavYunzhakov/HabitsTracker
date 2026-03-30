@@ -1,9 +1,9 @@
-package compose.project.habbitstracker.navigation
+package compose.project.habitstracker.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
-import compose.project.habbitstracker.AppState
+import compose.project.habitstracker.AppState
 import compose.project.home.navigation.HomeBaseRoute
 import compose.project.home.navigation.homeScreen
 

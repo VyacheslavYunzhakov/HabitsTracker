@@ -132,8 +132,8 @@ fun VerticalCalendarList(
     }
 }
 
-@Composable
-private fun MonthBlock(
+@Composable 
+fun MonthBlock(
     yearMonth: YearMonth,
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit
@@ -148,10 +148,10 @@ private fun MonthBlock(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 32.dp),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
@@ -214,7 +214,7 @@ private fun MonthBlock(
                                 .clip(MaterialTheme.shapes.small)
                                 .background(
                                     if (day != null && day == selectedDate)
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                                     else Color.Transparent
                                 )
                                 .then(

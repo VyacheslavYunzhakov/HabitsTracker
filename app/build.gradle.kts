@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "compose.project.habbitstracker"
+    namespace = "compose.project.habitstracker"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -14,7 +14,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "compose.project.habbitstracker"
+        applicationId = "compose.project.habitstracker"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

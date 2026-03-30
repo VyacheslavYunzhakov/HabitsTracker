@@ -1,4 +1,4 @@
-package compose.project.habbitstracker
+package compose.project.habitstracker
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp

@@ -1,4 +1,4 @@
-package compose.project.habbitstracker.ui.theme
+package compose.project.habitstracker.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
