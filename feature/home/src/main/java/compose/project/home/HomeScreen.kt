@@ -111,7 +111,7 @@ private fun MonthBlock(
     val startOffset = (firstDayOfMonth.dayOfWeek.value - 1) % 7
 
     // Форматирование названия месяца и года
-    val monthYearFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
+    val monthYearFormatter = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())
     val dayOfWeekFormatter = DateTimeFormatter.ofPattern("E", Locale.getDefault())
 
     Column(
