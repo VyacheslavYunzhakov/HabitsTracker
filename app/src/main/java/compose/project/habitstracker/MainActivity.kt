@@ -7,8 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.navigation.compose.rememberNavController
+import compose.project.designsystem.theme.HabitsTrackerTheme
 import compose.project.habitstracker.navigation.AppNavHost
-import compose.project.habitstracker.ui.theme.HabitsTrackerTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

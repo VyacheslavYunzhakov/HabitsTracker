@@ -1,10 +1,13 @@
 package compose.project.home
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -12,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -19,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -40,6 +47,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import compose.project.designsystem.theme.HabitsTrackerTheme
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -56,10 +64,115 @@ object CalendarDefaults {
 fun HabitTrackerScreen() {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
-    VerticalCalendarList(
-        selectedDate = selectedDate,
-        onDateSelected = { }
-    )
+    CalendarTabFrame {
+        VerticalCalendarList(
+            selectedDate = selectedDate,
+            onDateSelected = { }
+        )
+    }
+}
+
+@Composable
+fun CalendarTabFrame(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Column (
+        modifier = modifier.fillMaxSize()
+        .padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 0.dp),
+    ) {
+        Surface(
+            modifier = Modifier,
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+            color = MaterialTheme.colorScheme.primary
+        ) {
+            Image(
+                painter = painterResource(id = compose.project.designsystem.R.drawable.winecolor_black),
+                contentDescription = null,
+                modifier = Modifier
+                    .padding(10.dp)
+                    .size(35.dp)
+            )
+        }
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 22.dp),
+            shape = RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.primary
+            ),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                content()
+
+                MonthYearSwitcher(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 12.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthYearSwitcher(
+    modifier: Modifier = Modifier
+) {
+    var selected by remember { mutableStateOf("Month") }
+
+    Row(
+        modifier = modifier
+            .background(
+                color = Color(0xFF6FA8DC),
+                shape = RoundedCornerShape(24.dp)
+            )
+            .padding(4.dp)
+    ) {
+        // Кнопка "Month"
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    if (selected == "Month") Color(0xFF3C6FB6) else Color.Transparent
+                )
+                .clickable { selected = "Month" }
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Month",
+                color = if (selected == "Month") Color.White else Color.Black
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Кнопка "Year"
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    if (selected == "Year") Color(0xFF3C6FB6) else Color.Transparent
+                )
+                .clickable { selected = "Year" }
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Year",
+                color = if (selected == "Year") Color.White else Color.Black
+            )
+        }
+    }
 }
 
 @Composable
@@ -119,7 +232,11 @@ fun VerticalCalendarList(
 
     LazyColumn(
         state = listState,
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = 16.dp,
+            bottom = 16.dp
+        )
     ) {
         items(months) { yearMonth ->
             MonthBlock(
@@ -148,10 +265,10 @@ fun MonthBlock(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 32.dp),
+            .padding(horizontal = 16.dp),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.tertiary
         )
     ) {
         Column(
@@ -165,7 +282,8 @@ fun MonthBlock(
                 fontSize = CalendarDefaults.MonthTextSize,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(CalendarDefaults.SpaceAfterMonth))
@@ -183,7 +301,8 @@ fun MonthBlock(
                         fontSize = CalendarDefaults.DaysOfWeekTextSize,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -228,7 +347,7 @@ fun MonthBlock(
                                     text = day.dayOfMonth.toString(),
                                     fontSize = 16.sp,
                                     color = if (day == selectedDate)
-                                        MaterialTheme.colorScheme.primary
+                                        MaterialTheme.colorScheme.onPrimary
                                     else MaterialTheme.colorScheme.onSurface,
                                     fontWeight = if (day == selectedDate) FontWeight.Bold else FontWeight.Normal
                                 )
@@ -244,7 +363,7 @@ fun MonthBlock(
 @Preview(showBackground = true)
 @Composable
 fun HabitTrackerScreenPreview() {
-    MaterialTheme {
+    HabitsTrackerTheme {
         HabitTrackerScreen()
     }
 }

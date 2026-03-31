@@ -1,4 +1,4 @@
-package compose.project.habitstracker.ui.theme
+package compose.project.designsystem.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -12,9 +12,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Green80,
-    secondary = GreenGrey80,
-    tertiary = Mint80,
+    primary = Blue40,
+    secondary = BlueGrey40,
+    tertiary = Sky40,
     background = Color(0xFF121212),
     surface = Color(0xFF1E1E1E),
     surfaceVariant = Color(0xFF2C2C2C),
@@ -27,9 +27,9 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Green40,
-    secondary = GreenGrey40,
-    tertiary = Mint40,
+    primary = Blue80,
+    secondary = BlueGrey80,
+    tertiary = Sky80,
     background = Color(0xFFFFFFFF),
     surface = Color(0xFFF1F1F1),
     surfaceVariant = Color(0xFFE0E0E0),
@@ -38,14 +38,14 @@ private val LightColorScheme = lightColorScheme(
     onTertiary = Color.White,
     onBackground = Color.Black,
     onSurface = Color.Black,
-    onSurfaceVariant = Color.Black.copy(alpha = 0.7f)
+    onSurfaceVariant = Color.Black.copy(alpha = 0.7f),
 )
 
 @Composable
 fun HabitsTrackerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
