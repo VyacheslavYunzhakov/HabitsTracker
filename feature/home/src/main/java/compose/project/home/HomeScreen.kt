@@ -227,15 +227,15 @@ private fun MonthYearButton(
     onClick: () -> Unit,
     textMeasurer: TextMeasurer = rememberTextMeasurer()
 ) {
-    val TEXT_SIZE = 18.sp
+    val textSizeConst = 18.sp
     val density = LocalDensity.current
     val textStyle = TextStyle(
-        fontSize = TEXT_SIZE,
+        fontSize = textSizeConst,
         fontWeight = FontWeight.Normal
     )
     val textLayout = textMeasurer.measure(text, textStyle)
-    val textWidth = with(density) { textLayout.size.width.toFloat() }
-    val textHeight = with(density) { textLayout.size.height.toFloat() }
+    val textWidth = textLayout.size.width.toFloat()
+    val textHeight = textLayout.size.height.toFloat()
 
     val horizontalPadding = with(density) { 16.dp.toPx() }
     val verticalPadding = with(density) { 8.dp.toPx() }
@@ -244,7 +244,7 @@ private fun MonthYearButton(
     val buttonHeight = textHeight + verticalPadding * 2
 
     val paint = Paint().apply {
-        textSize = with(density) { TEXT_SIZE.toPx() }
+        textSize = with(density) { textSizeConst.toPx() }
         isAntiAlias = true
     }
     val textBounds = Rect()
