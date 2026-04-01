@@ -38,6 +38,7 @@ android {
 }
 
 dependencies {
+    api(libs.liquid)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

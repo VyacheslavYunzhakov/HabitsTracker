@@ -35,10 +35,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,6 +50,10 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import compose.project.designsystem.theme.HabitsTrackerTheme
+import io.github.fletchmckee.liquid.LiquidState
+import io.github.fletchmckee.liquid.liquefiable
+import io.github.fletchmckee.liquid.liquid
+import io.github.fletchmckee.liquid.rememberLiquidState
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -61,13 +67,16 @@ object CalendarDefaults {
 }
 
 @Composable
-fun HabitTrackerScreen() {
+fun HabitTrackerScreen(
+    liquidState: LiquidState = rememberLiquidState()
+) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
-    CalendarTabFrame {
+    CalendarTabFrame(liquidState = liquidState) {
         VerticalCalendarList(
             selectedDate = selectedDate,
-            onDateSelected = { }
+            onDateSelected = { },
+            liquidState = liquidState
         )
     }
 }
@@ -75,6 +84,7 @@ fun HabitTrackerScreen() {
 @Composable
 fun CalendarTabFrame(
     modifier: Modifier = Modifier,
+    liquidState: LiquidState,
     content: @Composable () -> Unit
 ) {
     Column (
@@ -115,63 +125,103 @@ fun CalendarTabFrame(
 
                 MonthYearSwitcher(
                     modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 12.dp)
+                        .align(Alignment.TopCenter),
+                    liquidState
                 )
             }
         }
     }
 }
 
+enum class MonthYearSelection {
+    MONTH, YEAR
+}
+
 @Composable
 fun MonthYearSwitcher(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    liquidState: LiquidState,
+    onSelectionChanged: (MonthYearSelection) -> Unit = {} // Callback для родителя
 ) {
-    var selected by remember { mutableStateOf("Month") }
+    var selected by remember { mutableStateOf(MonthYearSelection.MONTH) }
 
-    Row(
+    val monthText = stringResource(R.string.month_switcher_month)
+    val yearText = stringResource(R.string.month_switcher_year)
+
+    Box(
         modifier = modifier
-            .background(
-                color = Color(0xFF6FA8DC),
-                shape = RoundedCornerShape(24.dp)
-            )
-            .padding(4.dp)
+            .fillMaxWidth()
+            .height(80.dp)
     ) {
-        // Кнопка "Month"
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
+                .matchParentSize()
                 .background(
-                    if (selected == "Month") Color(0xFF3C6FB6) else Color.Transparent
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.25f),
+                            Color.Transparent
+                        )
+                    )
                 )
-                .clickable { selected = "Month" }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "Month",
-                color = if (selected == "Month") Color.White else Color.Black
-            )
-        }
+        )
 
-        Spacer(modifier = Modifier.width(8.dp))
-
-        // Кнопка "Year"
-        Box(
+        Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    if (selected == "Year") Color(0xFF3C6FB6) else Color.Transparent
-                )
-                .clickable { selected = "Year" }
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center
+                .align(Alignment.Center)
+                .liquid(liquidState) {
+                    shape = RoundedCornerShape(100)
+                    refraction = 0.5f
+                    curve = 0.5f
+                    edge = 0.1f
+                    tint = Color.White.copy(alpha = 0.2f)
+                    saturation = 1.5f
+                    dispersion = 0.25f
+                }
+                .padding(6.dp)
         ) {
-            Text(
-                "Year",
-                color = if (selected == "Year") Color.White else Color.Black
+            MonthYearButton(
+                text = monthText,
+                isSelected = selected == MonthYearSelection.MONTH,
+                onClick = {
+                    selected = MonthYearSelection.MONTH
+                    onSelectionChanged(MonthYearSelection.MONTH)
+                }
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            MonthYearButton(
+                text = yearText,
+                isSelected = selected == MonthYearSelection.YEAR,
+                onClick = {
+                    selected = MonthYearSelection.YEAR
+                    onSelectionChanged(MonthYearSelection.YEAR)
+                }
             )
         }
+    }
+}
+
+@Composable
+private fun MonthYearButton(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                if (isSelected) Color(0xCC3C6FB6) else Color.Transparent
+            )
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = text,
+            color = if (isSelected) Color.White else Color.Black
+        )
     }
 }
 
@@ -181,7 +231,8 @@ fun VerticalCalendarList(
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit,
     monthsBefore: Int = 12,
-    monthsAfter: Int = 12
+    monthsAfter: Int = 12,
+    liquidState: LiquidState
 ) {
     val currentMonth = remember { YearMonth.from(LocalDate.now()) }
     val months = remember(currentMonth, monthsBefore, monthsAfter) {
@@ -232,7 +283,7 @@ fun VerticalCalendarList(
 
     LazyColumn(
         state = listState,
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().liquefiable(liquidState),
         contentPadding = PaddingValues(
             top = 16.dp,
             bottom = 16.dp
