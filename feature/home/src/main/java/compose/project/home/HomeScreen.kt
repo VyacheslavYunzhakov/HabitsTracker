@@ -58,6 +58,17 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.runtime.State
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import android.graphics.Paint
+import android.graphics.Rect
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 
 object CalendarDefaults {
     val CardPadding = 16.dp
@@ -87,6 +98,13 @@ fun CalendarTabFrame(
     liquidState: LiquidState,
     content: @Composable () -> Unit
 ) {
+
+    val selectedState = remember { mutableStateOf(MonthYearSelection.MONTH) }
+
+    val onSelectionChanged = remember {
+        { selection: MonthYearSelection -> selectedState.value = selection }
+    }
+
     Column (
         modifier = modifier.fillMaxSize()
         .padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 0.dp),
@@ -124,9 +142,10 @@ fun CalendarTabFrame(
                 content()
 
                 MonthYearSwitcher(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter),
-                    liquidState
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    liquidState = liquidState,
+                    selectedState = selectedState,
+                    onSelectionChanged = onSelectionChanged
                 )
             }
         }
@@ -141,12 +160,13 @@ enum class MonthYearSelection {
 fun MonthYearSwitcher(
     modifier: Modifier = Modifier,
     liquidState: LiquidState,
-    onSelectionChanged: (MonthYearSelection) -> Unit = {} // Callback для родителя
+    selectedState: State<MonthYearSelection>,
+    onSelectionChanged: (MonthYearSelection) -> Unit = {}
 ) {
-    var selected by remember { mutableStateOf(MonthYearSelection.MONTH) }
 
     val monthText = stringResource(R.string.month_switcher_month)
     val yearText = stringResource(R.string.month_switcher_year)
+    val textMeasurer = rememberTextMeasurer()
 
     Box(
         modifier = modifier
@@ -182,22 +202,18 @@ fun MonthYearSwitcher(
         ) {
             MonthYearButton(
                 text = monthText,
-                isSelected = selected == MonthYearSelection.MONTH,
-                onClick = {
-                    selected = MonthYearSelection.MONTH
-                    onSelectionChanged(MonthYearSelection.MONTH)
-                }
+                selection = MonthYearSelection.MONTH,
+                selectedState = selectedState,
+                onClick = { onSelectionChanged(MonthYearSelection.MONTH) },
+                textMeasurer = textMeasurer
             )
-
             Spacer(modifier = Modifier.width(8.dp))
-
             MonthYearButton(
                 text = yearText,
-                isSelected = selected == MonthYearSelection.YEAR,
-                onClick = {
-                    selected = MonthYearSelection.YEAR
-                    onSelectionChanged(MonthYearSelection.YEAR)
-                }
+                selection = MonthYearSelection.YEAR,
+                selectedState = selectedState,
+                onClick = { onSelectionChanged(MonthYearSelection.YEAR) },
+                textMeasurer = textMeasurer
             )
         }
     }
@@ -206,23 +222,65 @@ fun MonthYearSwitcher(
 @Composable
 private fun MonthYearButton(
     text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
+    selection: MonthYearSelection,
+    selectedState: State<MonthYearSelection>,
+    onClick: () -> Unit,
+    textMeasurer: TextMeasurer = rememberTextMeasurer()
 ) {
+    val TEXT_SIZE = 18.sp
+    val density = LocalDensity.current
+    val textStyle = TextStyle(
+        fontSize = TEXT_SIZE,
+        fontWeight = FontWeight.Normal
+    )
+    val textLayout = textMeasurer.measure(text, textStyle)
+    val textWidth = with(density) { textLayout.size.width.toFloat() }
+    val textHeight = with(density) { textLayout.size.height.toFloat() }
+
+    val horizontalPadding = with(density) { 16.dp.toPx() }
+    val verticalPadding = with(density) { 8.dp.toPx() }
+
+    val buttonWidth = textWidth + horizontalPadding * 2
+    val buttonHeight = textHeight + verticalPadding * 2
+
+    val paint = Paint().apply {
+        textSize = with(density) { TEXT_SIZE.toPx() }
+        isAntiAlias = true
+    }
+    val textBounds = Rect()
+    paint.getTextBounds(text, 0, text.length, textBounds)
+    val textHeightPx = textBounds.height().toFloat()
+
+    val availableHeight = buttonHeight - verticalPadding * 2
+    val baselineOffset = verticalPadding + (availableHeight - textHeightPx) / 2 - textBounds.top
+
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                if (isSelected) Color(0xCC3C6FB6) else Color.Transparent
+            .size(
+                width = with(density) { buttonWidth.toDp() },
+                height = with(density) { buttonHeight.toDp() }
             )
+            .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = text,
-            color = if (isSelected) Color.White else Color.Black
-        )
-    }
+            .drawWithContent {
+                val isSelected = selectedState.value == selection
+
+                drawRoundRect(
+                    color = if (isSelected) Color(0xCC3C6FB6) else Color.Transparent,
+                    cornerRadius = CornerRadius(20.dp.toPx())
+                )
+
+                paint.color = (if (isSelected) Color.White else Color.Black).toArgb()
+                drawIntoCanvas { canvas ->
+                    canvas.nativeCanvas.drawText(
+                        text,
+                        horizontalPadding,
+                        baselineOffset,
+                        paint
+                    )
+                }
+            }
+    )
 }
 
 @Composable
