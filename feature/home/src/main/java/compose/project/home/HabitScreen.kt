@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 object CalendarDefaults {
     val CardPadding = 16.dp
@@ -79,7 +80,8 @@ object CalendarDefaults {
 
 @Composable
 fun HabitTrackerScreen(
-    liquidState: LiquidState = rememberLiquidState()
+    liquidState: LiquidState = rememberLiquidState(),
+    habitViewModel: HabitViewModel = hiltViewModel()
 ) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
