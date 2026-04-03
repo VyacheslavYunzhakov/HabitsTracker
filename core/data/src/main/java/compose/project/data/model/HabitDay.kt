@@ -1,10 +1,13 @@
 package compose.project.data.model
 
-import java.sql.Date
+import java.time.Instant
+import java.time.LocalDate
 
-class HabitDay(
+data class HabitDay(
+    val habitId: Long,
     val status: HabitStatus,
-    val date: Date
+    val date: LocalDate,
+    val createdAt: Instant,
 )
 
 enum class HabitStatus {
