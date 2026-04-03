@@ -67,6 +67,8 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import compose.project.data.model.HabitStatus
 
 object CalendarDefaults {
     val CardPadding = 16.dp
@@ -77,14 +79,25 @@ object CalendarDefaults {
 
 @Composable
 fun HabitTrackerScreen(
+    habitId: Long = 1L,
     liquidState: LiquidState = rememberLiquidState(),
     habitViewModel: HabitViewModel = hiltViewModel()
 ) {
-    HabitTrackerScreenContent(liquidState = liquidState)
+    val habitDays by habitViewModel.habitDays.collectAsStateWithLifecycle()
+
+    LaunchedEffect(habitId) {
+        habitViewModel.getHabitDaysByHabitId(habitId)
+    }
+
+    HabitTrackerScreenContent(
+        habitDays = habitDays,
+        liquidState = liquidState
+    )
 }
 
 @Composable
 fun HabitTrackerScreenContent(
+    habitDays: Map<LocalDate, HabitStatus> = emptyMap(),
     liquidState: LiquidState = rememberLiquidState(),
 ) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
@@ -92,6 +105,7 @@ fun HabitTrackerScreenContent(
     CalendarTabFrame(liquidState = liquidState) {
         VerticalCalendarList(
             selectedDate = selectedDate,
+            habitDays = habitDays,
             onDateSelected = { },
             liquidState = liquidState
         )
@@ -293,6 +307,7 @@ private fun MonthYearButton(
 fun VerticalCalendarList(
     modifier: Modifier = Modifier,
     selectedDate: LocalDate,
+    habitDays: Map<LocalDate, HabitStatus>,
     onDateSelected: (LocalDate) -> Unit,
     monthsBefore: Int = 12,
     monthsAfter: Int = 12,
@@ -357,6 +372,7 @@ fun VerticalCalendarList(
             MonthBlock(
                 yearMonth = yearMonth,
                 selectedDate = selectedDate,
+                habitDays = habitDays,
                 onDateSelected = onDateSelected
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -368,6 +384,7 @@ fun VerticalCalendarList(
 fun MonthBlock(
     yearMonth: YearMonth,
     selectedDate: LocalDate,
+    habitDays: Map<LocalDate, HabitStatus>,
     onDateSelected: (LocalDate) -> Unit
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
@@ -469,9 +486,17 @@ fun MonthBlock(
                                         else MaterialTheme.colorScheme.onSurface,
                                         fontWeight = if (day == selectedDate) FontWeight.Bold else FontWeight.Normal
                                     )
+
+                                    val status = habitDays[day]
+                                    val habitState = when (status) {
+                                        HabitStatus.COMPLETED -> HabitState.COMPLETED
+                                        HabitStatus.MISSED -> HabitState.MISSED
+                                        else -> HabitState.UNMARKED
+                                    }
+
                                     HabitIcon(
                                         selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
-                                        state = HabitState.UNMARKED,
+                                        state = habitState,
                                         modifier = Modifier
                                             .size(35.dp)
                                     )
