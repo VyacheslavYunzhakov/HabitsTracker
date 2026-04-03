@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -365,7 +364,7 @@ fun VerticalCalendarList(
     }
 }
 
-@Composable 
+@Composable
 fun MonthBlock(
     yearMonth: YearMonth,
     selectedDate: LocalDate,
@@ -445,7 +444,7 @@ fun MonthBlock(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .aspectRatio(1f)
+                                .height(60.dp)
                                 .clip(MaterialTheme.shapes.small)
                                 .background(
                                     if (day != null && day == selectedDate)
@@ -459,14 +458,24 @@ fun MonthBlock(
                             contentAlignment = Alignment.Center
                         ) {
                             if (day != null) {
-                                Text(
-                                    text = day.dayOfMonth.toString(),
-                                    fontSize = 16.sp,
-                                    color = if (day == selectedDate)
-                                        MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = if (day == selectedDate) FontWeight.Bold else FontWeight.Normal
-                                )
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = day.dayOfMonth.toString(),
+                                        fontSize = 12.sp,
+                                        color = if (day == selectedDate)
+                                            MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = if (day == selectedDate) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                    HabitIcon(
+                                        selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
+                                        state = HabitState.UNMARKED,
+                                        modifier = Modifier
+                                            .size(35.dp)
+                                    )
+                                }
                             }
                         }
                     }

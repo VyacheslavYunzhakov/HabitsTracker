@@ -11,5 +11,7 @@ data class HabitDay(
 )
 
 enum class HabitStatus {
-    Good, Bad, NotChecked
+    COMPLETED,
+    MISSED,
+    UNMARKED
 }
