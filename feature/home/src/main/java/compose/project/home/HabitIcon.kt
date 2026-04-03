@@ -44,7 +44,7 @@ fun HabitIcon(
     }
 
     Image(
-        painter = remember(drawable) { DrawablePainter(drawable) },
+        painter = remember(drawable, state) { DrawablePainter(drawable) },
         contentDescription = contentDescription,
         modifier = modifier
     )

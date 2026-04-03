@@ -91,7 +91,8 @@ fun HabitTrackerScreen(
 
     HabitTrackerScreenContent(
         habitDays = habitDays,
-        liquidState = liquidState
+        liquidState = liquidState,
+        onDateClick = { date -> habitViewModel.toggleHabitStatus(habitId, date) }
     )
 }
 
@@ -99,6 +100,7 @@ fun HabitTrackerScreen(
 fun HabitTrackerScreenContent(
     habitDays: Map<LocalDate, HabitStatus> = emptyMap(),
     liquidState: LiquidState = rememberLiquidState(),
+    onDateClick: (LocalDate) -> Unit = {}
 ) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
@@ -106,7 +108,10 @@ fun HabitTrackerScreenContent(
         VerticalCalendarList(
             selectedDate = selectedDate,
             habitDays = habitDays,
-            onDateSelected = { },
+            onDateSelected = { date ->
+                selectedDate = date
+                onDateClick(date)
+            },
             liquidState = liquidState
         )
     }

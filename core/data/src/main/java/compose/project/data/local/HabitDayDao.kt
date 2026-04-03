@@ -9,8 +9,11 @@ import androidx.room.Query
 interface HabitDayDao {
 
     @Query("SELECT * FROM habit_day_entries WHERE habit_id = :habitId ORDER BY date DESC")
-    fun getByHabitId(habitId: Long): List<HabitDayEntity>
+    suspend fun getByHabitId(habitId: Long): List<HabitDayEntity>
+
+    @Query("SELECT * FROM habit_day_entries WHERE habit_id = :habitId AND date = :date LIMIT 1")
+    suspend fun getByHabitIdAndDate(habitId: Long, date: java.time.LocalDate): HabitDayEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(entry: HabitDayEntity)
+    suspend fun insert(entry: HabitDayEntity)
 }

@@ -8,3 +8,10 @@ fun HabitDayEntity.toModel(): HabitDay = HabitDay(
     date = date,
     createdAt = createdAt,
 )
+
+fun HabitDay.toEntity(): HabitDayEntity = HabitDayEntity(
+    habitId = habitId,
+    status = status,
+    date = date,
+    createdAt = createdAt,
+)
