@@ -83,6 +83,13 @@ fun HabitTrackerScreen(
     liquidState: LiquidState = rememberLiquidState(),
     habitViewModel: HabitViewModel = hiltViewModel()
 ) {
+    HabitTrackerScreenContent(liquidState = liquidState)
+}
+
+@Composable
+fun HabitTrackerScreenContent(
+    liquidState: LiquidState = rememberLiquidState(),
+) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
 
     CalendarTabFrame(liquidState = liquidState) {
@@ -475,7 +482,7 @@ fun MonthBlock(
 @Composable
 fun HabitTrackerScreenPreview() {
     HabitsTrackerTheme {
-        HabitTrackerScreen()
+        HabitTrackerScreenContent()
     }
 }
 
