@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="state_completed" format="boolean" />
+    <attr name="state_missed" format="boolean" />
+    <attr name="state_unmarked" format="boolean" />
+
+    <declare-styleable name="HabitIconView">
+        <attr name="habitState" format="enum">
+            <enum name="completed" value="1"/>
+            <enum name="missed" value="2"/>
+            <enum name="unmarked" value="3"/>
+        </attr>
+    </declare-styleable>
+</resources>

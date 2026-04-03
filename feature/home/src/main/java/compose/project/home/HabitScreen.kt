@@ -1,7 +1,6 @@
 package compose.project.home
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +38,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -123,9 +121,9 @@ fun CalendarTabFrame(
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
             color = MaterialTheme.colorScheme.primary
         ) {
-            Image(
-                painter = painterResource(id = compose.project.designsystem.R.drawable.winecolor_black),
-                contentDescription = null,
+            HabitIcon(
+                selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
+                state = HabitState.DEFAULT,
                 modifier = Modifier
                     .padding(10.dp)
                     .size(35.dp)
