@@ -1,5 +1,6 @@
 package compose.project.home
 
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
 import compose.project.domain.HabitInteractor
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,19 +21,19 @@ class HabitViewModel @Inject constructor(
     private val habitInteractor: HabitInteractor
 ) : ViewModel() {
 
-    private val _habitDays = MutableStateFlow<Map<LocalDate, HabitStatus>>(emptyMap())
-    val habitDays: StateFlow<Map<LocalDate, HabitStatus>> = _habitDays.asStateFlow()
+    val habitDays = mutableStateMapOf<LocalDate, HabitStatus>()
 
     fun getHabitDaysByHabitId(habitId: Long) {
         viewModelScope.launch {
             val days = habitInteractor.getHabitDaysByHabitId(habitId)
-            _habitDays.value = days.associate { it.date to it.status }
+            habitDays.clear()
+            habitDays.putAll(days.associate { it.date to it.status })
         }
     }
 
     fun toggleHabitStatus(habitId: Long, date: LocalDate) {
         viewModelScope.launch {
-            val currentStatus = _habitDays.value[date] ?: HabitStatus.UNMARKED
+            val currentStatus = habitDays[date] ?: HabitStatus.UNMARKED
             val nextStatus = when (currentStatus) {
                 HabitStatus.UNMARKED -> HabitStatus.MISSED
                 HabitStatus.MISSED -> HabitStatus.COMPLETED
@@ -45,8 +46,10 @@ class HabitViewModel @Inject constructor(
                 date = date,
                 createdAt = Instant.now()
             )
+
             habitInteractor.updateHabitDay(habitDay)
-            getHabitDaysByHabitId(habitId)
+
+            habitDays[date] = nextStatus
         }
     }
 }

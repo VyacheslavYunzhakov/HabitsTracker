@@ -62,6 +62,8 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import android.graphics.Paint
 import android.graphics.Rect
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -83,14 +85,12 @@ fun HabitTrackerScreen(
     liquidState: LiquidState = rememberLiquidState(),
     habitViewModel: HabitViewModel = hiltViewModel()
 ) {
-    val habitDays by habitViewModel.habitDays.collectAsStateWithLifecycle()
-
     LaunchedEffect(habitId) {
         habitViewModel.getHabitDaysByHabitId(habitId)
     }
 
     HabitTrackerScreenContent(
-        habitDays = habitDays,
+        habitDays = habitViewModel.habitDays,
         liquidState = liquidState,
         onDateClick = { date -> habitViewModel.toggleHabitStatus(habitId, date) }
     )
@@ -98,7 +98,7 @@ fun HabitTrackerScreen(
 
 @Composable
 fun HabitTrackerScreenContent(
-    habitDays: Map<LocalDate, HabitStatus> = emptyMap(),
+    habitDays: SnapshotStateMap<LocalDate, HabitStatus> = mutableStateMapOf(),
     liquidState: LiquidState = rememberLiquidState(),
     onDateClick: (LocalDate) -> Unit = {}
 ) {
@@ -491,38 +491,58 @@ fun MonthBlock(
                                         fontWeight = FontWeight.Medium
                                     )
                                 } else {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = day.dayOfMonth.toString(),
-                                            fontSize = 12.sp,
-                                            color = if (day == selectedDate)
-                                                MaterialTheme.colorScheme.onPrimary
-                                            else MaterialTheme.colorScheme.onSurface,
-                                            fontWeight = if (day == selectedDate) FontWeight.Bold else FontWeight.Normal
-                                        )
-
-                                        val status = habitDays[day]
-                                        val habitState = when (status) {
-                                            HabitStatus.COMPLETED -> HabitState.COMPLETED
-                                            HabitStatus.MISSED -> HabitState.MISSED
-                                            else -> HabitState.UNMARKED
-                                        }
-
-                                        HabitIcon(
-                                            selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
-                                            state = habitState,
-                                            modifier = Modifier
-                                                .size(35.dp)
-                                        )
+                                    val status = habitDays[day]
+                                    val habitState = when (status) {
+                                        HabitStatus.COMPLETED -> HabitState.COMPLETED
+                                        HabitStatus.MISSED -> HabitState.MISSED
+                                        else -> HabitState.UNMARKED
                                     }
+                                    DayCell(day, isSelected = day == selectedDate,  habitDays, onDateSelected)
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DayCell(
+    day: LocalDate,
+    isSelected : Boolean,
+    habitDays: Map<LocalDate, HabitStatus>,
+    onDateSelected: (LocalDate) -> Unit
+) {
+    val status = habitDays[day]
+
+    val habitState = when (status) {
+        HabitStatus.COMPLETED -> HabitState.COMPLETED
+        HabitStatus.MISSED -> HabitState.MISSED
+        else -> HabitState.UNMARKED
+    }
+
+    Box(
+        modifier = Modifier
+            .height(60.dp)
+            .clickable { onDateSelected(day) },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = day.dayOfMonth.toString(),
+                fontSize = 12.sp,
+                color = if (isSelected)
+                    MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            )
+            HabitIcon(
+                selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
+                state = habitState,
+                modifier = Modifier.size(35.dp)
+            )
         }
     }
 }
