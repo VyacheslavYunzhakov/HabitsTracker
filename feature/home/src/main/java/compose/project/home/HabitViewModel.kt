@@ -1,6 +1,7 @@
 package compose.project.home
 
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.lifecycle.ViewModel
 import compose.project.domain.HabitInteractor
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,35 +22,37 @@ class HabitViewModel @Inject constructor(
     private val habitInteractor: HabitInteractor
 ) : ViewModel() {
 
-    val habitDays = mutableStateMapOf<LocalDate, HabitStatus>()
+    private val _habitDays = mutableStateMapOf<Long, HabitStatus>()
+    val habitDays: SnapshotStateMap<Long, HabitStatus> = _habitDays
 
     fun getHabitDaysByHabitId(habitId: Long) {
         viewModelScope.launch {
             val days = habitInteractor.getHabitDaysByHabitId(habitId)
-            habitDays.clear()
-            habitDays.putAll(days.associate { it.date to it.status })
+            _habitDays.clear()
+            _habitDays.putAll(days.associate { it.date.toEpochDay() to it.status })
         }
     }
 
-    fun toggleHabitStatus(habitId: Long, date: LocalDate) {
+    fun toggleHabitStatus(habitId: Long, epochDay: Long) {
         viewModelScope.launch {
-            val currentStatus = habitDays[date] ?: HabitStatus.UNMARKED
+            val date = LocalDate.ofEpochDay(epochDay)
+            val currentStatus = _habitDays[epochDay] ?: HabitStatus.UNMARKED
             val nextStatus = when (currentStatus) {
                 HabitStatus.UNMARKED -> HabitStatus.MISSED
                 HabitStatus.MISSED -> HabitStatus.COMPLETED
                 HabitStatus.COMPLETED -> HabitStatus.UNMARKED
             }
 
-            val habitDay = HabitDay(
-                habitId = habitId,
-                status = nextStatus,
-                date = date,
-                createdAt = Instant.now()
+            habitInteractor.updateHabitDay(
+                HabitDay(
+                    habitId = habitId,
+                    status = nextStatus,
+                    date = date,
+                    createdAt = Instant.now()
+                )
             )
 
-            habitInteractor.updateHabitDay(habitDay)
-
-            habitDays[date] = nextStatus
+            _habitDays[epochDay] = nextStatus
         }
     }
 }
