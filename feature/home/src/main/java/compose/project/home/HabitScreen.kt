@@ -463,6 +463,9 @@ fun MonthBlock(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     week.forEach { day ->
+                        val today = remember { LocalDate.now() }
+                        val isFuture = day?.isAfter(today) == true
+
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -474,37 +477,46 @@ fun MonthBlock(
                                     else Color.Transparent
                                 )
                                 .then(
-                                    if (day != null) Modifier.clickable { onDateSelected(day) }
+                                    if (day != null && !isFuture) Modifier.clickable { onDateSelected(day) }
                                     else Modifier
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
                             if (day != null) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
+                                if (isFuture) {
                                     Text(
                                         text = day.dayOfMonth.toString(),
-                                        fontSize = 12.sp,
-                                        color = if (day == selectedDate)
-                                            MaterialTheme.colorScheme.onPrimary
-                                        else MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = if (day == selectedDate) FontWeight.Bold else FontWeight.Normal
+                                        fontSize = 18.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                        fontWeight = FontWeight.Medium
                                     )
+                                } else {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = day.dayOfMonth.toString(),
+                                            fontSize = 12.sp,
+                                            color = if (day == selectedDate)
+                                                MaterialTheme.colorScheme.onPrimary
+                                            else MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = if (day == selectedDate) FontWeight.Bold else FontWeight.Normal
+                                        )
 
-                                    val status = habitDays[day]
-                                    val habitState = when (status) {
-                                        HabitStatus.COMPLETED -> HabitState.COMPLETED
-                                        HabitStatus.MISSED -> HabitState.MISSED
-                                        else -> HabitState.UNMARKED
+                                        val status = habitDays[day]
+                                        val habitState = when (status) {
+                                            HabitStatus.COMPLETED -> HabitState.COMPLETED
+                                            HabitStatus.MISSED -> HabitState.MISSED
+                                            else -> HabitState.UNMARKED
+                                        }
+
+                                        HabitIcon(
+                                            selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
+                                            state = habitState,
+                                            modifier = Modifier
+                                                .size(35.dp)
+                                        )
                                     }
-
-                                    HabitIcon(
-                                        selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
-                                        state = habitState,
-                                        modifier = Modifier
-                                            .size(35.dp)
-                                    )
                                 }
                             }
                         }
