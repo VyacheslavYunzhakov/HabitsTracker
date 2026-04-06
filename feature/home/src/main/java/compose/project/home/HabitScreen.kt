@@ -26,10 +26,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,7 +61,6 @@ import androidx.compose.ui.graphics.nativeCanvas
 import android.graphics.Paint
 import android.graphics.Rect
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.graphics.toArgb
@@ -103,14 +100,11 @@ fun HabitTrackerScreenContent(
     liquidState: LiquidState = rememberLiquidState(),
     onDateClick: (Long) -> Unit = {}
 ) {
-    var selectedDate by remember { mutableLongStateOf(LocalDate.now().toEpochDay()) }
 
     CalendarTabFrame(liquidState = liquidState) {
         VerticalCalendarList(
-            selectedDate = selectedDate,
             habitDays = habitDays,
             onDateSelected = { date ->
-                selectedDate = date
                 onDateClick(date)
             },
             liquidState = liquidState
@@ -142,10 +136,7 @@ fun CalendarTabFrame(
         ) {
             HabitIcon(
                 selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
-                state = HabitState.DEFAULT,
-                modifier = Modifier
-                    .padding(10.dp)
-                    .size(35.dp)
+                modifier = Modifier.padding(4.dp).size(35.dp)
             )
         }
         Card(
@@ -312,7 +303,6 @@ private fun MonthYearButton(
 @Composable
 fun VerticalCalendarList(
     modifier: Modifier = Modifier,
-    selectedDate: Long,
     habitDays: SnapshotStateMap<Long, HabitStatus>,
     onDateSelected: (Long) -> Unit,
     monthsBefore: Int = 12,
@@ -377,7 +367,6 @@ fun VerticalCalendarList(
         items(months) { yearMonth ->
             MonthBlock(
                 yearMonth = yearMonth,
-                selectedDate = selectedDate,
                 habitDays = habitDays,
                 onDateSelected = onDateSelected
             )
@@ -389,7 +378,6 @@ fun VerticalCalendarList(
 @Composable
 fun MonthBlock(
     yearMonth: YearMonth,
-    selectedDate: Long,
     habitDays: SnapshotStateMap<Long, HabitStatus>,
     onDateSelected: (Long) -> Unit
 ) {
@@ -399,6 +387,8 @@ fun MonthBlock(
 
     val monthYearFormatter = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())
     val dayOfWeekFormatter = DateTimeFormatter.ofPattern("E", Locale.getDefault())
+
+    val todayEpoch = remember { LocalDate.now().toEpochDay() }
 
     Card(
         modifier = Modifier
@@ -473,11 +463,7 @@ fun MonthBlock(
                                 .weight(1f)
                                 .height(60.dp)
                                 .clip(MaterialTheme.shapes.small)
-                                .background(
-                                    if (day != null && day == selectedDate)
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                                    else Color.Transparent
-                                )
+                                .background(Color.Transparent)
                                 .then(
                                     if (day != null && !isFuture) Modifier.clickable { onDateSelected(day) }
                                     else Modifier
@@ -493,19 +479,12 @@ fun MonthBlock(
                                         fontWeight = FontWeight.Medium
                                     )
                                 } else {
-                                    val status = habitDays[day]
-                                    val habitState = when (status) {
-                                        HabitStatus.COMPLETED -> HabitState.COMPLETED
-                                        HabitStatus.MISSED -> HabitState.MISSED
-                                        else -> HabitState.UNMARKED
-                                    }
-
                                     key(day) {
                                         DayCell(
                                             epochDay = day,
                                             dayOfMonth = localDate.dayOfMonth,
-                                            isSelected = day == selectedDate,
-                                            habitState = habitState,
+                                            isToday = day == todayEpoch,
+                                            habitDays,
                                             onDateSelected = onDateSelected
                                         )
                                     }
@@ -523,8 +502,8 @@ fun MonthBlock(
 private fun DayCell(
     epochDay: Long,
     dayOfMonth: Int,
-    isSelected: Boolean,
-    habitState: HabitState,
+    isToday: Boolean,
+    habitDays: SnapshotStateMap<Long, HabitStatus>,
     onDateSelected: (Long) -> Unit
 ) {
     Box(
@@ -537,12 +516,14 @@ private fun DayCell(
             Text(
                 text = dayOfMonth.toString(),
                 fontSize = 12.sp,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                color = if (isToday) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSurface
             )
 
             HabitIcon(
                 selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
-                state = habitState,
+                epochDay = epochDay,
+                habitDays = habitDays,
                 modifier = Modifier.size(35.dp)
             )
         }
