@@ -119,6 +119,21 @@ fun HabitTrackerScreenContent(
     liquidState: LiquidState = rememberLiquidState(),
     onDateClick: (Long, HabitStatus) -> Unit = { _, _ -> }
 ) {
+    CalendarTabFrame(liquidState = liquidState) {
+        CalendarWithPanel(
+            habitDays = habitDays,
+            liquidState = liquidState,
+            onDateClick = onDateClick
+        )
+    }
+}
+
+@Composable
+fun CalendarWithPanel(
+    habitDays: SnapshotStateMap<Long, HabitStatus>,
+    liquidState: LiquidState,
+    onDateClick: (Long, HabitStatus) -> Unit
+) {
     var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
     var panelBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
@@ -130,7 +145,6 @@ fun HabitTrackerScreenContent(
 
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-
                     val insidePanel = panelBounds?.contains(down.position) == true
                     if (!insidePanel) {
                         panelAnchor = null
@@ -138,15 +152,13 @@ fun HabitTrackerScreenContent(
                 }
             }
     ) {
-        CalendarTabFrame(liquidState = liquidState) {
-            VerticalCalendarList(
-                habitDays = habitDays,
-                liquidState = liquidState,
-                onDayClick = { day, x, y, yearMonth ->
-                    panelAnchor = PanelAnchor(day, x, y, yearMonth)
-                }
-            )
-        }
+        VerticalCalendarList(
+            habitDays = habitDays,
+            liquidState = liquidState,
+            onDayClick = { day, x, y, yearMonth ->
+                panelAnchor = PanelAnchor(day, x, y, yearMonth)
+            }
+        )
 
         CalendarPanelOverlay(
             panelAnchor = panelAnchor,
