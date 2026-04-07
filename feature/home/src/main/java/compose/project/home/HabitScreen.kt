@@ -60,22 +60,24 @@ import androidx.compose.ui.graphics.nativeCanvas
 import android.graphics.Paint
 import android.graphics.Rect
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.TextMeasurer
@@ -115,28 +117,45 @@ fun HabitTrackerScreen(
 fun HabitTrackerScreenContent(
     habitDays: SnapshotStateMap<Long, HabitStatus> = mutableStateMapOf(),
     liquidState: LiquidState = rememberLiquidState(),
-    onDateClick: (Long, HabitStatus) -> Unit = {_,_ ->}
+    onDateClick: (Long, HabitStatus) -> Unit = { _, _ -> }
 ) {
     var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
-    CalendarTabFrame(liquidState = liquidState) {
-        VerticalCalendarList(
-            habitDays = habitDays,
-            onDateSelected = { date, habitStatus  ->
-                onDateClick(date, habitStatus)
-            },
-            liquidState = liquidState,
-            onDayClick = { day, x, y, yearMonth ->
-                panelAnchor = PanelAnchor(day, x, y, yearMonth)
+    var panelBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(panelAnchor, panelBounds) {
+                if (panelAnchor == null) return@pointerInput
+
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+
+                    val insidePanel = panelBounds?.contains(down.position) == true
+                    if (!insidePanel) {
+                        panelAnchor = null
+                    }
+                }
             }
-        )
+    ) {
+        CalendarTabFrame(liquidState = liquidState) {
+            VerticalCalendarList(
+                habitDays = habitDays,
+                liquidState = liquidState,
+                onDayClick = { day, x, y, yearMonth ->
+                    panelAnchor = PanelAnchor(day, x, y, yearMonth)
+                }
+            )
+        }
+
         CalendarPanelOverlay(
             panelAnchor = panelAnchor,
             habitDays = habitDays,
-            onDismiss = { panelAnchor = null },
             onSelect = { day, status ->
                 onDateClick(day, status)
                 panelAnchor = null
-            }
+            },
+            onBoundsChanged = { panelBounds = it }
         )
     }
 }
@@ -334,7 +353,6 @@ private fun MonthYearButton(
 fun VerticalCalendarList(
     modifier: Modifier = Modifier,
     habitDays: SnapshotStateMap<Long, HabitStatus>,
-    onDateSelected: (Long, HabitStatus) -> Unit,
     onDayClick: (Long, Float, Float, YearMonth) -> Unit,
     monthsBefore: Int = 12,
     monthsAfter: Int = 12,
@@ -345,7 +363,6 @@ fun VerticalCalendarList(
         (-monthsBefore..monthsAfter).map { currentMonth.plusMonths(it.toLong()) }
     }
 
-    var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
     val listState = rememberLazyListState()
 
     Box(modifier = modifier.fillMaxSize().liquefiable(liquidState)) {
@@ -361,45 +378,11 @@ fun VerticalCalendarList(
                 MonthBlock(
                     yearMonth = yearMonth,
                     habitDays = habitDays,
-                    onDateSelected = onDateSelected,
                     onDayClick = { day, x, y ->
                         onDayClick(day, x, y, yearMonth)
                     }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-
-        panelAnchor?.let { anchor ->
-            val density = LocalDensity.current
-            val panelWidth = 176.dp
-            val panelHeight = 62.dp
-
-            val x = with(density) { (anchor.x - panelWidth.toPx() / 2f).toInt() }
-            val y = with(density) { (anchor.y - panelHeight.toPx() - 6.dp.toPx()).toInt() }
-
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(x, y) }
-                    .zIndex(100f)
-            ) {
-                HabitStatePanel(
-                    selectedState = when (habitDays[anchor.day]) {
-                        HabitStatus.COMPLETED -> HabitState.COMPLETED
-                        HabitStatus.MISSED -> HabitState.MISSED
-                        HabitStatus.UNMARKED -> HabitState.UNMARKED
-                        else -> HabitState.DEFAULT
-                    },
-                    onSelect = { state ->
-                        when (state) {
-                            HabitState.COMPLETED -> onDateSelected(anchor.day, HabitStatus.COMPLETED)
-                            HabitState.MISSED -> onDateSelected(anchor.day, HabitStatus.MISSED)
-                            HabitState.UNMARKED -> onDateSelected(anchor.day, HabitStatus.UNMARKED)
-                            HabitState.DEFAULT -> Unit
-                        }
-                        panelAnchor = null
-                    }
-                )
             }
         }
     }
@@ -409,8 +392,9 @@ fun VerticalCalendarList(
 fun CalendarPanelOverlay(
     panelAnchor: PanelAnchor?,
     habitDays: SnapshotStateMap<Long, HabitStatus>,
-    onDismiss: () -> Unit,
-    onSelect: (Long, HabitStatus) -> Unit
+    onSelect: (Long, HabitStatus) -> Unit,
+    onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit
+
 ) {
     panelAnchor?.let { anchor ->
         val density = LocalDensity.current
@@ -424,6 +408,9 @@ fun CalendarPanelOverlay(
             modifier = Modifier
                 .offset { IntOffset(x, y) }
                 .zIndex(100f)
+                .onGloballyPositioned { coords ->
+                    onBoundsChanged(coords.boundsInParent())
+                }
         ) {
             HabitStatePanel(
                 selectedState = when (habitDays[anchor.day]) {
@@ -450,7 +437,6 @@ fun CalendarPanelOverlay(
 fun MonthBlock(
     yearMonth: YearMonth,
     habitDays: SnapshotStateMap<Long, HabitStatus>,
-    onDateSelected: (Long, HabitStatus) -> Unit,
     onDayClick: (day: Long, x: Float, y: Float) -> Unit
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
@@ -463,12 +449,8 @@ fun MonthBlock(
     val todayEpoch = remember { LocalDate.now().toEpochDay() }
     val today = remember { LocalDate.now() }
 
-    val selectedDay = rememberSaveable(yearMonth) { mutableStateOf<Long?>(null) }
-    val panelPosition = remember { mutableStateOf<Offset?>(null) }
     val monthBlockCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val dayCellCoords = remember(yearMonth) { mutableMapOf<Long, LayoutCoordinates>() }
-
-    val density = LocalDensity.current
 
     Box(
         modifier = Modifier
@@ -591,52 +573,6 @@ fun MonthBlock(
                             }
                         }
                     }
-                }
-            }
-        }
-
-        if (selectedDay.value != null && panelPosition.value != null) {
-            val selected = selectedDay.value
-            val panelPos = panelPosition.value
-
-            if (selected != null && panelPos != null) {
-                val panelWidth = 176.dp
-                val panelHeight = 62.dp
-
-                val x = with(density) { (panelPos.x - panelWidth.toPx() / 2f).toInt() }
-                val y = with(density) { (panelPos.y - panelHeight.toPx() - 6.dp.toPx()).toInt() }
-
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(x, y) }
-                        .zIndex(100f)
-                ) {
-                    HabitStatePanel(
-                        selectedState = when (habitDays[selected]) {
-                            HabitStatus.COMPLETED -> HabitState.COMPLETED
-                            HabitStatus.MISSED -> HabitState.MISSED
-                            HabitStatus.UNMARKED -> HabitState.UNMARKED
-                            else -> HabitState.DEFAULT
-                        },
-                        onSelect = { state ->
-                            when (state) {
-                                HabitState.COMPLETED -> onDateSelected(
-                                    selected,
-                                    HabitStatus.COMPLETED
-                                )
-
-                                HabitState.MISSED -> onDateSelected(selected, HabitStatus.MISSED)
-                                HabitState.UNMARKED -> onDateSelected(
-                                    selected,
-                                    HabitStatus.UNMARKED
-                                )
-
-                                HabitState.DEFAULT -> Unit
-                            }
-                            selectedDay.value = null
-                            panelPosition.value = null
-                        }
-                    )
                 }
             }
         }
