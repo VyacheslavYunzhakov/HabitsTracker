@@ -33,26 +33,20 @@ class HabitViewModel @Inject constructor(
         }
     }
 
-    fun toggleHabitStatus(habitId: Long, epochDay: Long) {
+    fun toggleHabitStatus(habitId: Long, epochDay: Long, habitStatus: HabitStatus) {
         viewModelScope.launch {
             val date = LocalDate.ofEpochDay(epochDay)
-            val currentStatus = _habitDays[epochDay] ?: HabitStatus.UNMARKED
-            val nextStatus = when (currentStatus) {
-                HabitStatus.UNMARKED -> HabitStatus.MISSED
-                HabitStatus.MISSED -> HabitStatus.COMPLETED
-                HabitStatus.COMPLETED -> HabitStatus.UNMARKED
-            }
 
             habitInteractor.updateHabitDay(
                 HabitDay(
                     habitId = habitId,
-                    status = nextStatus,
+                    status = habitStatus,
                     date = date,
                     createdAt = Instant.now()
                 )
             )
 
-            _habitDays[epochDay] = nextStatus
+            _habitDays[epochDay] = habitStatus
         }
     }
 }

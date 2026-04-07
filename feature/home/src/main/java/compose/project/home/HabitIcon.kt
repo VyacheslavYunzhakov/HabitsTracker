@@ -18,7 +18,8 @@ import kotlin.math.roundToInt
 @Composable
 fun HabitIcon(
     @DrawableRes selectorRes: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    habitState: HabitState
 ) {
     val context = LocalContext.current
     val drawable = remember(selectorRes, context) {
@@ -28,7 +29,12 @@ fun HabitIcon(
     Spacer(
         modifier = modifier.drawWithCache {
             onDrawBehind {
-                val stateSet = intArrayOf()
+                val stateSet = when (habitState) {
+                    HabitState.COMPLETED -> intArrayOf(R.attr.state_completed)
+                    HabitState.MISSED -> intArrayOf(R.attr.state_missed)
+                    HabitState.UNMARKED -> intArrayOf(R.attr.state_unmarked)
+                    HabitState.DEFAULT -> intArrayOf()
+                }
 
                 if (!drawable.state.contentEquals(stateSet)) {
                     drawable.state = stateSet
