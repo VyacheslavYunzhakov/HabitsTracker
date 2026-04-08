@@ -12,6 +12,9 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.SavedStateHandle
+import androidx.navigation.toRoute
+import compose.project.home.navigation.HabitRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -74,36 +77,50 @@ data class DayUiModel(
 
 @HiltViewModel
 class HabitViewModel @Inject constructor(
-    private val habitInteractor: HabitInteractor
+    private val habitInteractor: HabitInteractor,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val habitRoute = savedStateHandle.toRoute<HabitRoute>()
+    private val habitId = habitRoute.habitId
 
     private val currentMonth = YearMonth.now()
     private val monthsBefore = 12
     private val monthsAfter = 12
 
-    private var currentHabitId: Long? = null
     private var habitDaysByEpochDay: Map<Long, HabitStatus> = emptyMap()
 
-    private val _uiState = MutableStateFlow(HabitTrackerUiState())
+    private val initialSelectedDate = LocalDate.now()
+
+    private val _uiState = MutableStateFlow(
+        HabitTrackerUiState(
+            calendarState = CalendarUiState(
+                selectedDate = initialSelectedDate,
+                months = buildMonths(selectedDate = initialSelectedDate)
+            )
+        )
+    )
     val uiState: StateFlow<HabitTrackerUiState> = _uiState.asStateFlow()
 
-    fun getHabitDaysByHabitId(habitId: Long) {
-        currentHabitId = habitId
-
+    init {
         viewModelScope.launch {
             val days = habitInteractor.getHabitDaysByHabitId(habitId)
             habitDaysByEpochDay = days.associate { it.date.toEpochDay() to it.status }
-            rebuildCalendar()
+
+            _uiState.update { state ->
+                state.copy(
+                    calendarState = state.calendarState.copy(
+                        months = state.calendarState.months.applyStatuses(habitDaysByEpochDay)
+                    )
+                )
+            }
         }
     }
 
     fun onDayClicked(day: DayUiModel) {
-
         _uiState.update { state ->
             state.copy(
-                panelState = HabitPanelUiState.Visible(
-                    day = day
-                )
+                panelState = HabitPanelUiState.Visible(day = day)
             )
         }
     }
@@ -115,7 +132,6 @@ class HabitViewModel @Inject constructor(
     }
 
     fun toggleHabitStatus(epochDay: Long, habitStatus: HabitStatus) {
-        val habitId = currentHabitId ?: return
         val date = LocalDate.ofEpochDay(epochDay)
 
         viewModelScope.launch {
@@ -131,37 +147,13 @@ class HabitViewModel @Inject constructor(
             habitDaysByEpochDay = habitDaysByEpochDay + (epochDay to habitStatus)
 
             _uiState.update { state ->
-                val selectedDate = state.calendarState.selectedDate ?: date
                 state.copy(
                     calendarState = state.calendarState.copy(
-                        selectedDate = selectedDate,
-                        months = buildMonths(selectedDate = selectedDate)
+                        months = state.calendarState.months.updateDay(epochDay, habitStatus)
                     ),
                     panelState = HabitPanelUiState.Hidden
                 )
             }
-        }
-    }
-
-    private fun rebuildCalendar() {
-        val selectedDate = _uiState.value.calendarState.selectedDate
-        _uiState.update { state ->
-            state.copy(
-                calendarState = state.calendarState.copy(
-                    months = buildMonths(selectedDate = selectedDate)
-                ),
-                panelState = when (val panel = state.panelState) {
-                    HabitPanelUiState.Hidden -> panel
-                    is HabitPanelUiState.Visible -> {
-                        HabitPanelUiState.Visible(
-                            day = buildDayUiModel(
-                                date = panel.day.date,
-                                selectedDate = selectedDate ?: panel.day.date
-                            )
-                        )
-                    }
-                }
-            )
         }
     }
 
@@ -224,6 +216,53 @@ class HabitViewModel @Inject constructor(
             isInCurrentMonth = currentMonth?.let { date.yearMonth == it } ?: true,
             isClickable = true
         )
+    }
+
+    private fun List<MonthUiModel>.applyStatuses(
+        statuses: Map<Long, HabitStatus>
+    ): List<MonthUiModel> {
+        return map { month ->
+            month.copy(
+                weeks = month.weeks.map { week ->
+                    week.copy(
+                        days = week.days.map { day ->
+                            day?.let {
+                                val newStatus = statuses[it.epochDay] ?: it.habitStatus
+                                if (newStatus == it.habitStatus) it else it.copy(habitStatus = newStatus)
+                            }
+                        }
+                    )
+                }
+            )
+        }
+    }
+
+    private fun List<MonthUiModel>.updateDay(
+        epochDay: Long,
+        habitStatus: HabitStatus
+    ): List<MonthUiModel> {
+        val targetDate = LocalDate.ofEpochDay(epochDay)
+        val targetMonth = YearMonth.from(targetDate)
+
+        return map { month ->
+            if (month.yearMonth != targetMonth) {
+                month
+            } else {
+                month.copy(
+                    weeks = month.weeks.map { week ->
+                        week.copy(
+                            days = week.days.map { day ->
+                                if (day?.epochDay == epochDay) {
+                                    day.copy(habitStatus = habitStatus)
+                                } else {
+                                    day
+                                }
+                            }
+                        )
+                    }
+                )
+            }
+        }
     }
 
     private val LocalDate.yearMonth: YearMonth

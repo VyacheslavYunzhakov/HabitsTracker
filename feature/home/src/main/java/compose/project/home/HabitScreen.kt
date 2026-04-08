@@ -99,15 +99,10 @@ object CalendarDefaults {
 
 @Composable
 fun HabitTrackerScreen(
-    habitId: Long = 1L,
     liquidState: LiquidState = rememberLiquidState(),
     habitViewModel: HabitViewModel = hiltViewModel()
 ) {
     val uiState by habitViewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(habitId) {
-        habitViewModel.getHabitDaysByHabitId(habitId)
-    }
 
     HabitTrackerScreenContent(
         uiState = uiState,
