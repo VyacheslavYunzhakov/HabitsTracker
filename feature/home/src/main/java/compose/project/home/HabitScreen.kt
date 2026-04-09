@@ -602,10 +602,10 @@ fun CalendarPanelOverlay(
 
         val xPx = when (direction) {
             PanelDirection.Start -> {
-                anchor.x - cellWidthPx / 2f - with(density) { 12.dp.toPx() }
+                anchor.x - cellWidthPx / 2f - with(density) { 13.dp.toPx() }
             }
             PanelDirection.End -> {
-                anchor.x + cellWidthPx / 2f - currentWidthPx - with(density) { 24.dp.toPx() }
+                anchor.x + cellWidthPx / 2f - currentWidthPx - with(density) { 21.dp.toPx() }
             }
         }
 
@@ -626,6 +626,7 @@ fun CalendarPanelOverlay(
             if (isVisibleContent) {
                 HabitStatePanel(
                     direction = direction,
+                    selectedStatus = anchor.day.habitStatus,
                     onSelect = { state ->
                         val status = when (state) {
                             HabitState.COMPLETED -> HabitStatus.COMPLETED
@@ -645,9 +646,14 @@ fun CalendarPanelOverlay(
 @Composable
 private fun HabitStatePanel(
     direction: PanelDirection,
+    selectedStatus: HabitStatus?,
     onSelect: (HabitState) -> Unit,
     panelLiquidState: LiquidState
 ) {
+    val states = remember(selectedStatus, direction) {
+        buildOrderedStates(selectedStatus, direction)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -671,11 +677,7 @@ private fun HabitStatePanel(
             },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            listOf(
-                HabitState.COMPLETED,
-                HabitState.MISSED,
-                HabitState.UNMARKED
-            ).forEach { state ->
+            states.forEach { state ->
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -691,6 +693,29 @@ private fun HabitStatePanel(
                 }
             }
         }
+    }
+}
+
+private fun buildOrderedStates(
+    selectedStatus: HabitStatus?,
+    direction: PanelDirection
+): List<HabitState> {
+    val selectedState = when (selectedStatus) {
+        HabitStatus.COMPLETED -> HabitState.COMPLETED
+        HabitStatus.MISSED -> HabitState.MISSED
+        HabitStatus.UNMARKED -> HabitState.UNMARKED
+        null -> HabitState.COMPLETED
+    }
+
+    val others = listOf(
+        HabitState.COMPLETED,
+        HabitState.MISSED,
+        HabitState.UNMARKED
+    ).filter { it != selectedState }
+
+    return when (direction) {
+        PanelDirection.Start -> listOf(selectedState) + others
+        PanelDirection.End -> others + listOf(selectedState)
     }
 }
 
