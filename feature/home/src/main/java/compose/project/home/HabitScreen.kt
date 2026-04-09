@@ -72,6 +72,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -548,6 +549,11 @@ private fun MonthYearButton(
     )
 }
 
+private enum class PanelDirection {
+    Start,
+    End
+}
+
 @Composable
 fun CalendarPanelOverlay(
     panelAnchor: PanelAnchor?,
@@ -556,18 +562,30 @@ fun CalendarPanelOverlay(
     onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit,
     panelLiquidState: LiquidState
 ) {
-
     panelAnchor?.let { anchor ->
         val density = LocalDensity.current
-        val dayCellWidth= 56.dp
-        val dayCellHeight= 70.dp
-        val targetWidth = 168.dp
+        val configuration = LocalConfiguration.current
+
+        val dayCellWidth = 60.dp
+        val dayCellHeight = 70.dp
+        val targetWidth = 136.dp
         val targetHeight = 70.dp
 
-        // Animatable для анимации ширины и высоты
+        val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+        val cellWidthPx = with(density) { dayCellWidth.toPx() }
+        val targetWidthPx = with(density) { targetWidth.toPx() }
+        val sidePaddingPx = with(density) { 6.dp.toPx() }
+
         val widthAnim = remember { Animatable(dayCellWidth.value) }
         val heightAnim = remember { Animatable(dayCellHeight.value) }
-        val isVisibleContent  = panelState is HabitPanelUiState.Visible || widthAnim.value > dayCellWidth.value
+
+        val direction = remember(anchor.x, screenWidthPx) {
+            val openToRightFits = anchor.x + targetWidthPx + sidePaddingPx <= screenWidthPx
+            if (openToRightFits) PanelDirection.Start else PanelDirection.End
+        }
+
+        val isVisibleContent =
+            panelState is HabitPanelUiState.Visible || widthAnim.value > dayCellWidth.value
 
         LaunchedEffect(panelState) {
             if (panelState is HabitPanelUiState.Visible) {
@@ -579,18 +597,35 @@ fun CalendarPanelOverlay(
             }
         }
 
-        val x = with(density) { (anchor.x - widthAnim.value.dp.toPx() / 2f - 3.dp.toPx()).toInt() }
-        val y = with(density) { (anchor.y - heightAnim.value.dp.toPx() - 6.dp.toPx() + 10.dp.toPx()).toInt() }
+        val currentWidthPx = with(density) { widthAnim.value.dp.toPx() }
+        val currentHeightPx = with(density) { heightAnim.value.dp.toPx() }
+
+        val xPx = when (direction) {
+            PanelDirection.Start -> {
+                anchor.x - cellWidthPx / 2f - with(density) { 12.dp.toPx() }
+            }
+            PanelDirection.End -> {
+                anchor.x + cellWidthPx / 2f - currentWidthPx - with(density) { 24.dp.toPx() }
+            }
+        }
+
+        val yPx = anchor.y - currentHeightPx - with(density) { 6.dp.toPx() } + with(density) { 10.dp.toPx() }
+
+        val x = xPx.toInt().coerceIn(0, (screenWidthPx - currentWidthPx).toInt())
+        val y = yPx.toInt()
 
         Box(
             modifier = Modifier
                 .offset { IntOffset(x, y) }
                 .size(widthAnim.value.dp, heightAnim.value.dp)
                 .zIndex(100f)
-                .onGloballyPositioned { coords -> onBoundsChanged(coords.boundsInParent()) }
+                .onGloballyPositioned { coords ->
+                    onBoundsChanged(coords.boundsInParent())
+                }
         ) {
             if (isVisibleContent) {
                 HabitStatePanel(
+                    direction = direction,
                     onSelect = { state ->
                         val status = when (state) {
                             HabitState.COMPLETED -> HabitStatus.COMPLETED
@@ -609,14 +644,16 @@ fun CalendarPanelOverlay(
 
 @Composable
 private fun HabitStatePanel(
+    direction: PanelDirection,
     onSelect: (HabitState) -> Unit,
     panelLiquidState: LiquidState
 ) {
     Box(
         modifier = Modifier
+            .fillMaxSize()
             .liquid(panelLiquidState) {
                 shape = RoundedCornerShape(100)
-                frost= 10.dp
+                frost = 10.dp
                 refraction = 0.5f
                 curve = 0.5f
                 edge = 0.1f
@@ -627,7 +664,11 @@ private fun HabitStatePanel(
             .padding(top = 18.dp, bottom = 10.dp, start = 8.dp, end = 8.dp)
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = when (direction) {
+                PanelDirection.Start -> Arrangement.spacedBy(3.dp, Alignment.Start)
+                PanelDirection.End -> Arrangement.spacedBy(3.dp, Alignment.End)
+            },
             verticalAlignment = Alignment.CenterVertically
         ) {
             listOf(
@@ -635,7 +676,6 @@ private fun HabitStatePanel(
                 HabitState.MISSED,
                 HabitState.UNMARKED
             ).forEach { state ->
-
                 Box(
                     modifier = Modifier
                         .size(40.dp)
