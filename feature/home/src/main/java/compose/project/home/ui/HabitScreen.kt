@@ -1,4 +1,4 @@
-package compose.project.home
+package compose.project.home.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -25,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -56,33 +55,38 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import android.graphics.Paint
 import android.graphics.Rect
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import compose.project.data.model.HabitStatus
+import compose.project.designsystem.R
+import compose.project.home.CalendarSwitcherUiState
+import compose.project.home.CalendarUiState
+import compose.project.home.CalendarViewMode
+import compose.project.home.DayUiModel
+import compose.project.home.HabitIcon
+import compose.project.home.HabitPanelUiState
+import compose.project.home.HabitState
+import compose.project.home.HabitTrackerUiState
+import compose.project.home.HabitViewModel
+import compose.project.home.MonthUiModel
+import compose.project.home.WeekUiModel
 import java.time.DayOfWeek
 import java.time.temporal.TemporalAdjusters
+import kotlin.collections.forEach
 
 object CalendarDefaults {
     val CardPadding = 16.dp
@@ -114,7 +118,7 @@ fun HabitTrackerScreenContent(
     onDayClicked: (DayUiModel) -> Unit = { _ -> },
     onPanelDismiss: () -> Unit = {},
 
-) {
+    ) {
     CalendarTabFrame(switcherLiquidState = switcherLiquidState) {
         CalendarWithPanel(
             uiState = uiState,
@@ -204,7 +208,7 @@ fun CalendarTabFrame(
             color = MaterialTheme.colorScheme.primary
         ) {
             HabitIcon(
-                selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
+                selectorRes = R.drawable.drink_icon_selector,
                 modifier = Modifier.padding(4.dp).size(35.dp),
                 HabitState.DEFAULT
             )
@@ -251,8 +255,8 @@ fun MonthYearSwitcher(
     onSelectionChanged: (MonthYearSelection) -> Unit = {}
 ) {
 
-    val monthText = stringResource(R.string.month_switcher_month)
-    val yearText = stringResource(R.string.month_switcher_year)
+    val monthText = stringResource(compose.project.home.R.string.month_switcher_month)
+    val yearText = stringResource(compose.project.home.R.string.month_switcher_year)
     val textMeasurer = rememberTextMeasurer()
 
     Box(
@@ -465,7 +469,14 @@ fun MonthBlock(
 private fun DayCell(dayUiModel: DayUiModel) {
     Box(
         modifier = Modifier
-            .height(60.dp),
+            .height(60.dp)
+            .background(
+                if (dayUiModel.isToday)
+                    MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
+                else
+                    Color.Transparent,
+                shape = RoundedCornerShape(10.dp),
+            ),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -476,7 +487,7 @@ private fun DayCell(dayUiModel: DayUiModel) {
                 else MaterialTheme.colorScheme.onSurface
             )
             HabitIcon(
-                selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
+                selectorRes = R.drawable.drink_icon_selector,
                 habitStatus = dayUiModel.habitStatus,
                 modifier = Modifier.size(35.dp)
             )
@@ -549,175 +560,7 @@ private fun MonthYearButton(
     )
 }
 
-private enum class PanelDirection {
-    Start,
-    End
-}
 
-@Composable
-fun CalendarPanelOverlay(
-    panelAnchor: PanelAnchor?,
-    panelState: HabitPanelUiState,
-    onSelect: (Long, HabitStatus) -> Unit,
-    onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit,
-    panelLiquidState: LiquidState
-) {
-    panelAnchor?.let { anchor ->
-        val density = LocalDensity.current
-        val configuration = LocalConfiguration.current
-
-        val dayCellWidth = 60.dp
-        val dayCellHeight = 70.dp
-        val targetWidth = 136.dp
-        val targetHeight = 70.dp
-
-        val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-        val cellWidthPx = with(density) { dayCellWidth.toPx() }
-        val targetWidthPx = with(density) { targetWidth.toPx() }
-        val sidePaddingPx = with(density) { 6.dp.toPx() }
-
-        val widthAnim = remember { Animatable(dayCellWidth.value) }
-        val heightAnim = remember { Animatable(dayCellHeight.value) }
-
-        val direction = remember(anchor.x, screenWidthPx) {
-            val openToRightFits = anchor.x + targetWidthPx + sidePaddingPx <= screenWidthPx
-            if (openToRightFits) PanelDirection.Start else PanelDirection.End
-        }
-
-        val isVisibleContent =
-            panelState is HabitPanelUiState.Visible || widthAnim.value > dayCellWidth.value
-
-        LaunchedEffect(panelState) {
-            if (panelState is HabitPanelUiState.Visible) {
-                widthAnim.animateTo(targetWidth.value, animationSpec = tween(300))
-                heightAnim.animateTo(targetHeight.value, animationSpec = tween(300))
-            } else {
-                widthAnim.snapTo(dayCellWidth.value)
-                heightAnim.snapTo(dayCellHeight.value)
-            }
-        }
-
-        val currentWidthPx = with(density) { widthAnim.value.dp.toPx() }
-        val currentHeightPx = with(density) { heightAnim.value.dp.toPx() }
-
-        val xPx = when (direction) {
-            PanelDirection.Start -> {
-                anchor.x - cellWidthPx / 2f - with(density) { 13.dp.toPx() }
-            }
-            PanelDirection.End -> {
-                anchor.x + cellWidthPx / 2f - currentWidthPx - with(density) { 21.dp.toPx() }
-            }
-        }
-
-        val yPx = anchor.y - currentHeightPx - with(density) { 6.dp.toPx() } + with(density) { 10.dp.toPx() }
-
-        val x = xPx.toInt().coerceIn(0, (screenWidthPx - currentWidthPx).toInt())
-        val y = yPx.toInt()
-
-        Box(
-            modifier = Modifier
-                .offset { IntOffset(x, y) }
-                .size(widthAnim.value.dp, heightAnim.value.dp)
-                .zIndex(100f)
-                .onGloballyPositioned { coords ->
-                    onBoundsChanged(coords.boundsInParent())
-                }
-        ) {
-            if (isVisibleContent) {
-                HabitStatePanel(
-                    direction = direction,
-                    selectedStatus = anchor.day.habitStatus,
-                    onSelect = { state ->
-                        val status = when (state) {
-                            HabitState.COMPLETED -> HabitStatus.COMPLETED
-                            HabitState.MISSED -> HabitStatus.MISSED
-                            HabitState.UNMARKED -> HabitStatus.UNMARKED
-                            HabitState.DEFAULT -> return@HabitStatePanel
-                        }
-                        onSelect(anchor.day.epochDay, status)
-                    },
-                    panelLiquidState = panelLiquidState
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun HabitStatePanel(
-    direction: PanelDirection,
-    selectedStatus: HabitStatus?,
-    onSelect: (HabitState) -> Unit,
-    panelLiquidState: LiquidState
-) {
-    val states = remember(selectedStatus, direction) {
-        buildOrderedStates(selectedStatus, direction)
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .liquid(panelLiquidState) {
-                shape = RoundedCornerShape(100)
-                frost = 10.dp
-                refraction = 0.5f
-                curve = 0.5f
-                edge = 0.1f
-                tint = Color.White.copy(alpha = 0.2f)
-                saturation = 1.5f
-                dispersion = 0.25f
-            }
-            .padding(top = 18.dp, bottom = 10.dp, start = 8.dp, end = 8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = when (direction) {
-                PanelDirection.Start -> Arrangement.spacedBy(3.dp, Alignment.Start)
-                PanelDirection.End -> Arrangement.spacedBy(3.dp, Alignment.End)
-            },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            states.forEach { state ->
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .clickable { onSelect(state) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    HabitIcon(
-                        selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
-                        habitState = state,
-                        modifier = Modifier.size(35.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun buildOrderedStates(
-    selectedStatus: HabitStatus?,
-    direction: PanelDirection
-): List<HabitState> {
-    val selectedState = when (selectedStatus) {
-        HabitStatus.COMPLETED -> HabitState.COMPLETED
-        HabitStatus.MISSED -> HabitState.MISSED
-        HabitStatus.UNMARKED -> HabitState.UNMARKED
-        null -> HabitState.COMPLETED
-    }
-
-    val others = listOf(
-        HabitState.COMPLETED,
-        HabitState.MISSED,
-        HabitState.UNMARKED
-    ).filter { it != selectedState }
-
-    return when (direction) {
-        PanelDirection.Start -> listOf(selectedState) + others
-        PanelDirection.End -> others + listOf(selectedState)
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
