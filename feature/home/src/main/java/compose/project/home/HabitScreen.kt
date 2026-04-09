@@ -38,9 +38,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import compose.project.designsystem.theme.HabitsTrackerTheme
@@ -59,19 +56,16 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import android.graphics.Paint
 import android.graphics.Rect
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -82,7 +76,6 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -99,14 +92,12 @@ object CalendarDefaults {
 
 @Composable
 fun HabitTrackerScreen(
-    liquidState: LiquidState = rememberLiquidState(),
     habitViewModel: HabitViewModel = hiltViewModel()
 ) {
     val uiState by habitViewModel.uiState.collectAsStateWithLifecycle()
 
     HabitTrackerScreenContent(
         uiState = uiState,
-        liquidState = liquidState,
         onStatusSelected = { date, habitStatus -> habitViewModel.toggleHabitStatus(date, habitStatus) },
         onDayClicked = { day -> habitViewModel.onDayClicked(day) },
         onPanelDismiss = { habitViewModel.onPanelDismiss() }
@@ -116,15 +107,18 @@ fun HabitTrackerScreen(
 @Composable
 fun HabitTrackerScreenContent(
     uiState: HabitTrackerUiState,
-    liquidState: LiquidState = rememberLiquidState(),
+    switcherLiquidState: LiquidState = rememberLiquidState(),
+    panelLiquidState: LiquidState = rememberLiquidState(),
     onStatusSelected: (Long, HabitStatus) -> Unit = { _, _ -> },
-    onDayClicked: (DayUiModel) -> Unit = {_ ->},
-    onPanelDismiss: () -> Unit = {}
+    onDayClicked: (DayUiModel) -> Unit = { _ -> },
+    onPanelDismiss: () -> Unit = {},
+
 ) {
-    CalendarTabFrame(liquidState = liquidState) {
+    CalendarTabFrame(switcherLiquidState = switcherLiquidState) {
         CalendarWithPanel(
             uiState = uiState,
-            liquidState = liquidState,
+            switcherLiquidState = switcherLiquidState,
+            panelLiquidState = panelLiquidState,
             onStatusSelected = onStatusSelected,
             onDayClicked = onDayClicked,
             onPanelDismiss = onPanelDismiss
@@ -135,7 +129,8 @@ fun HabitTrackerScreenContent(
 @Composable
 fun CalendarWithPanel(
     uiState: HabitTrackerUiState,
-    liquidState: LiquidState,
+    switcherLiquidState: LiquidState,
+    panelLiquidState: LiquidState,
     onStatusSelected: (Long, HabitStatus) -> Unit,
     onDayClicked: (DayUiModel) -> Unit = {},
     onPanelDismiss: () -> Unit
@@ -146,6 +141,7 @@ fun CalendarWithPanel(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .liquefiable(switcherLiquidState)
             .pointerInput(panelAnchor, panelBounds) {
                 if (panelAnchor == null) return@pointerInput
 
@@ -160,7 +156,7 @@ fun CalendarWithPanel(
     ) {
         VerticalCalendarList(
             calendarState = uiState.calendarState,
-            liquidState = liquidState,
+            panelLiquidState = panelLiquidState,
             onDayClick = { day, x, y ->
                 onDayClicked(day)
                 panelAnchor = PanelAnchor(
@@ -174,6 +170,7 @@ fun CalendarWithPanel(
         CalendarPanelOverlay(
             panelAnchor = panelAnchor,
             panelState = uiState.panelState,
+            panelLiquidState = panelLiquidState,
             onSelect = { day, status ->
                 onStatusSelected(day, status)
                 onPanelDismiss()
@@ -186,7 +183,7 @@ fun CalendarWithPanel(
 @Composable
 fun CalendarTabFrame(
     modifier: Modifier = Modifier,
-    liquidState: LiquidState,
+    switcherLiquidState: LiquidState,
     content: @Composable () -> Unit
 ) {
 
@@ -232,7 +229,7 @@ fun CalendarTabFrame(
 
                 MonthYearSwitcher(
                     modifier = Modifier.align(Alignment.TopCenter),
-                    liquidState = liquidState,
+                    switcherLiquidState = switcherLiquidState,
                     selectedState = selectedState,
                     onSelectionChanged = onSelectionChanged
                 )
@@ -248,7 +245,7 @@ enum class MonthYearSelection {
 @Composable
 fun MonthYearSwitcher(
     modifier: Modifier = Modifier,
-    liquidState: LiquidState,
+    switcherLiquidState: LiquidState,
     selectedState: State<MonthYearSelection>,
     onSelectionChanged: (MonthYearSelection) -> Unit = {}
 ) {
@@ -278,7 +275,7 @@ fun MonthYearSwitcher(
         Row(
             modifier = Modifier
                 .align(Alignment.Center)
-                .liquid(liquidState) {
+                .liquid(switcherLiquidState) {
                     shape = RoundedCornerShape(100)
                     refraction = 0.5f
                     curve = 0.5f
@@ -315,12 +312,12 @@ fun VerticalCalendarList(
     calendarState: CalendarUiState,
     onDayClick: (DayUiModel, Float, Float) -> Unit,
     monthsBefore: Int = 12,
-    liquidState: LiquidState,
+    panelLiquidState: LiquidState
 ) {
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = monthsBefore)
 
-    Box(modifier = modifier.fillMaxSize().liquefiable(liquidState)) {
+    Box(modifier = modifier.fillMaxSize().liquefiable(panelLiquidState)) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -556,34 +553,44 @@ fun CalendarPanelOverlay(
     panelAnchor: PanelAnchor?,
     panelState: HabitPanelUiState,
     onSelect: (Long, HabitStatus) -> Unit,
-    onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit
-
+    onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit,
+    panelLiquidState: LiquidState
 ) {
+
     panelAnchor?.let { anchor ->
         val density = LocalDensity.current
-        val panelWidth = 176.dp
-        val panelHeight = 62.dp
+        val dayCellWidth= 56.dp
+        val dayCellHeight= 70.dp
+        val targetWidth = 168.dp
+        val targetHeight = 70.dp
 
-        val x = with(density) { (anchor.x - panelWidth.toPx() / 2f).toInt() }
-        val y = with(density) { (anchor.y - panelHeight.toPx() - 6.dp.toPx()).toInt() }
-        if (panelState is HabitPanelUiState.Visible) {
-            Box(
-                modifier = Modifier
-                    .offset { IntOffset(x, y) }
-                    .zIndex(100f)
-                    .onGloballyPositioned { coords ->
-                        onBoundsChanged(coords.boundsInParent())
-                    }
-                    .clickable {
+        // Animatable для анимации ширины и высоты
+        val widthAnim = remember { Animatable(dayCellWidth.value) }
+        val heightAnim = remember { Animatable(dayCellHeight.value) }
+        val isVisibleContent  = panelState is HabitPanelUiState.Visible || widthAnim.value > dayCellWidth.value
 
-                    }
-            ) {
+        LaunchedEffect(panelState) {
+            if (panelState is HabitPanelUiState.Visible) {
+                widthAnim.animateTo(targetWidth.value, animationSpec = tween(300))
+                heightAnim.animateTo(targetHeight.value, animationSpec = tween(300))
+            } else {
+                widthAnim.snapTo(dayCellWidth.value)
+                heightAnim.snapTo(dayCellHeight.value)
+            }
+        }
+
+        val x = with(density) { (anchor.x - widthAnim.value.dp.toPx() / 2f - 3.dp.toPx()).toInt() }
+        val y = with(density) { (anchor.y - heightAnim.value.dp.toPx() - 6.dp.toPx() + 10.dp.toPx()).toInt() }
+
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(x, y) }
+                .size(widthAnim.value.dp, heightAnim.value.dp)
+                .zIndex(100f)
+                .onGloballyPositioned { coords -> onBoundsChanged(coords.boundsInParent()) }
+        ) {
+            if (isVisibleContent) {
                 HabitStatePanel(
-                    selectedState = when (panelState.day.habitStatus) {
-                        HabitStatus.COMPLETED -> HabitState.COMPLETED
-                        HabitStatus.MISSED -> HabitState.MISSED
-                        HabitStatus.UNMARKED -> HabitState.UNMARKED
-                    },
                     onSelect = { state ->
                         val status = when (state) {
                             HabitState.COMPLETED -> HabitStatus.COMPLETED
@@ -592,7 +599,8 @@ fun CalendarPanelOverlay(
                             HabitState.DEFAULT -> return@HabitStatePanel
                         }
                         onSelect(anchor.day.epochDay, status)
-                    }
+                    },
+                    panelLiquidState = panelLiquidState
                 )
             }
         }
@@ -601,23 +609,25 @@ fun CalendarPanelOverlay(
 
 @Composable
 private fun HabitStatePanel(
-    selectedState: HabitState,
-    onSelect: (HabitState) -> Unit
+    onSelect: (HabitState) -> Unit,
+    panelLiquidState: LiquidState
 ) {
     Box(
         modifier = Modifier
-            .widthIn(min = 150.dp)
-            .clip(PentagonBubbleShape())
-            .background(MaterialTheme.colorScheme.surface)
-            .border(
-                1.dp,
-                MaterialTheme.colorScheme.primary,
-                PentagonBubbleShape()
-            )
-            .padding(top = 18.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
+            .liquid(panelLiquidState) {
+                shape = RoundedCornerShape(100)
+                frost= 10.dp
+                refraction = 0.5f
+                curve = 0.5f
+                edge = 0.1f
+                tint = Color.White.copy(alpha = 0.2f)
+                saturation = 1.5f
+                dispersion = 0.25f
+            }
+            .padding(top = 18.dp, bottom = 10.dp, start = 8.dp, end = 8.dp)
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             listOf(
@@ -625,52 +635,22 @@ private fun HabitStatePanel(
                 HabitState.MISSED,
                 HabitState.UNMARKED
             ).forEach { state ->
-                val isSelected = selectedState == state
 
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                            else Color.Transparent
-                        )
                         .clickable { onSelect(state) },
                     contentAlignment = Alignment.Center
                 ) {
                     HabitIcon(
                         selectorRes = compose.project.designsystem.R.drawable.drink_icon_selector,
                         habitState = state,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(35.dp)
                     )
                 }
             }
         }
-    }
-}
-
-class PentagonBubbleShape(
-    private val arrowWidth: Float = 26f,
-    private val arrowHeight: Float = 12f
-) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density
-    ): Outline {
-        val path = Path()
-        val midX = size.width / 2f
-
-        path.moveTo(0f, arrowHeight)
-        path.lineTo(midX - arrowWidth / 2f, arrowHeight)
-        path.lineTo(midX, 0f)
-        path.lineTo(midX + arrowWidth / 2f, arrowHeight)
-        path.lineTo(size.width, arrowHeight)
-        path.lineTo(size.width, size.height)
-        path.lineTo(0f, size.height)
-        path.close()
-
-        return Outline.Generic(path)
     }
 }
 
@@ -751,12 +731,6 @@ fun generateMonthPreview(
         yearMonth = yearMonth,
         weeks = weeks
     )
-}
-
-fun TextUnit.toDp(density: Density): Dp {
-    return with(density) {
-        this@toDp.toPx().toDp()
-    }
 }
 
 data class PanelAnchor(
