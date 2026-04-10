@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -52,6 +53,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -62,8 +64,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import compose.project.data.model.HabitStatus
@@ -93,6 +97,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
+import kotlin.math.roundToInt
 
 
 object CalendarDefaults {
@@ -138,9 +143,8 @@ fun HabitTrackerScreenContent(
 
     CalendarTabFrame(
         switcherLiquidState = switcherLiquidState,
-        selectedMode = uiState.switcherState.selectedMode,
+        pagerState = pagerState,
         onModeChanged = { mode ->
-            onModeChanged(mode)
             scope.launch {
                 pagerState.animateScrollToPage(mode.page())
             }
@@ -231,7 +235,7 @@ fun CalendarWithPanel(
 fun CalendarTabFrame(
     modifier: Modifier = Modifier,
     switcherLiquidState: LiquidState,
-    selectedMode: CalendarViewMode,
+    pagerState: PagerState,
     onModeChanged: (CalendarViewMode) -> Unit,
     content: @Composable () -> Unit,
 ){
@@ -276,7 +280,7 @@ fun CalendarTabFrame(
                 MonthYearSwitcher(
                     modifier = Modifier.align(Alignment.TopCenter),
                     switcherLiquidState = switcherLiquidState,
-                    selectedState = selectedMode,
+                    pagerState = pagerState,
                     onSelectionChanged = onModeChanged
                 )
             }
@@ -288,13 +292,35 @@ fun CalendarTabFrame(
 fun MonthYearSwitcher(
     modifier: Modifier = Modifier,
     switcherLiquidState: LiquidState,
-    selectedState: CalendarViewMode,
+    pagerState: PagerState,
     onSelectionChanged: (CalendarViewMode) -> Unit
 ) {
-
     val monthText = stringResource(compose.project.home.R.string.month_switcher_month)
     val yearText = stringResource(compose.project.home.R.string.month_switcher_year)
     val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+
+    var monthBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var yearBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+
+    val progress = remember(pagerState) {
+        derivedStateOf {
+            (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                .coerceIn(0f, 1f)
+        }
+    }.value
+
+    val indicatorBounds = remember(progress, monthBounds, yearBounds) {
+        val m = monthBounds
+        val y = yearBounds
+        if (m == null || y == null) null
+        else androidx.compose.ui.geometry.Rect(
+            left = lerp(m.left, y.left, progress),
+            top = lerp(m.top, y.top, progress),
+            right = lerp(m.right, y.right, progress),
+            bottom = lerp(m.bottom, y.bottom, progress)
+        )
+    }
 
     Box(
         modifier = modifier
@@ -314,7 +340,7 @@ fun MonthYearSwitcher(
                 )
         )
 
-        Row(
+        Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .liquid(switcherLiquidState) {
@@ -328,22 +354,41 @@ fun MonthYearSwitcher(
                 }
                 .padding(6.dp)
         ) {
+            indicatorBounds?.let { rect ->
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                rect.left.roundToInt(),
+                                rect.top.roundToInt()
+                            )
+                        }
+                        .size(
+                            width = with(density) { rect.width.toDp() },
+                            height = with(density) { rect.height.toDp() }
+                        )
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xCC3C6FB6))
+                )
+            }
 
-            MonthYearButton(
-                text = monthText,
-                selection = CalendarViewMode.MONTH,
-                selectedState = selectedState,
-                onClick = { onSelectionChanged(CalendarViewMode.MONTH) },
-                textMeasurer = textMeasurer
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            MonthYearButton(
-                text = yearText,
-                selection = CalendarViewMode.YEAR,
-                selectedState = selectedState,
-                onClick = { onSelectionChanged(CalendarViewMode.YEAR) },
-                textMeasurer = textMeasurer
-            )
+            Row {
+                MonthYearButton(
+                    text = monthText,
+                    onClick = { onSelectionChanged(CalendarViewMode.MONTH) },
+                    textMeasurer = textMeasurer,
+                    indicatorBounds = indicatorBounds,
+                    onBoundsChanged = { monthBounds = it }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                MonthYearButton(
+                    text = yearText,
+                    onClick = { onSelectionChanged(CalendarViewMode.YEAR) },
+                    textMeasurer = textMeasurer,
+                    indicatorBounds = indicatorBounds,
+                    onBoundsChanged = { yearBounds = it }
+                )
+            }
         }
     }
 }
@@ -540,13 +585,14 @@ private fun DayCell(dayUiModel: DayUiModel) {
 @Composable
 private fun MonthYearButton(
     text: String,
-    selection: CalendarViewMode,
-    selectedState: CalendarViewMode,
     onClick: () -> Unit,
-    textMeasurer: TextMeasurer = rememberTextMeasurer()
+    textMeasurer: TextMeasurer = rememberTextMeasurer(),
+    indicatorBounds: androidx.compose.ui.geometry.Rect?,
+    onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit
 ) {
     val textSizeConst = 18.sp
     val density = LocalDensity.current
+
     val textStyle = TextStyle(
         fontSize = textSizeConst,
         fontWeight = FontWeight.Normal
@@ -565,12 +611,14 @@ private fun MonthYearButton(
         textSize = with(density) { textSizeConst.toPx() }
         isAntiAlias = true
     }
+
     val textBounds = Rect()
     paint.getTextBounds(text, 0, text.length, textBounds)
     val textHeightPx = textBounds.height().toFloat()
-
     val availableHeight = buttonHeight - verticalPadding * 2
     val baselineOffset = verticalPadding + (availableHeight - textHeightPx) / 2 - textBounds.top
+
+    var buttonBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
     Box(
         modifier = Modifier
@@ -578,17 +626,17 @@ private fun MonthYearButton(
                 width = with(density) { buttonWidth.toDp() },
                 height = with(density) { buttonHeight.toDp() }
             )
+            .onGloballyPositioned { coords ->
+                val bounds = coords.boundsInParent()
+                buttonBounds = bounds
+                onBoundsChanged(bounds)
+            }
             .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
             .drawWithContent {
-                val isSelected = selectedState == selection
+                val bounds = buttonBounds ?: return@drawWithContent
 
-                drawRoundRect(
-                    color = if (isSelected) Color(0xCC3C6FB6) else Color.Transparent,
-                    cornerRadius = CornerRadius(20.dp.toPx())
-                )
-
-                paint.color = (if (isSelected) Color.White else Color.Black).toArgb()
+                paint.color = Color.Black.toArgb()
                 drawIntoCanvas { canvas ->
                     canvas.nativeCanvas.drawText(
                         text,
@@ -597,10 +645,43 @@ private fun MonthYearButton(
                         paint
                     )
                 }
+
+                val indicator = indicatorBounds ?: return@drawWithContent
+
+                val overlapLeft = maxOf(bounds.left, indicator.left)
+                val overlapTop = maxOf(bounds.top, indicator.top)
+                val overlapRight = minOf(bounds.right, indicator.right)
+                val overlapBottom = minOf(bounds.bottom, indicator.bottom)
+
+                if (overlapRight > overlapLeft && overlapBottom > overlapTop) {
+                    val localLeft = overlapLeft - bounds.left
+                    val localTop = overlapTop - bounds.top
+                    val localRight = overlapRight - bounds.left
+                    val localBottom = overlapBottom - bounds.top
+
+                    drawIntoCanvas { canvas ->
+                        canvas.save()
+                        canvas.clipRect(
+                            left = localLeft,
+                            top = localTop,
+                            right = localRight,
+                            bottom = localBottom
+                        )
+
+                        paint.color = Color.White.toArgb()
+                        canvas.nativeCanvas.drawText(
+                            text,
+                            horizontalPadding,
+                            baselineOffset,
+                            paint
+                        )
+
+                        canvas.restore()
+                    }
+                }
             }
     )
 }
-
 
 
 @Preview(showBackground = true)
