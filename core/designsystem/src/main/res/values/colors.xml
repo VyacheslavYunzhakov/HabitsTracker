@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="habit_completed">#23ee10</color>
+    <color name="habit_missed">#ee1010</color>
+    <color name="habit_unmarked">#e1e1e1</color>
+</resources>
