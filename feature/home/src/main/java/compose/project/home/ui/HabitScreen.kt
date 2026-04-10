@@ -203,11 +203,7 @@ fun CalendarWithPanel(
                         panelLiquidState = panelLiquidState,
                         onDayClick = { day, x, y ->
                             onDayClicked(day)
-                            panelAnchor = PanelAnchor(
-                                day = day,
-                                x = x,
-                                y = y
-                            )
+                            panelAnchor = PanelAnchor(day = day, x = x, y = y)
                         }
                     )
                 }
@@ -216,18 +212,18 @@ fun CalendarWithPanel(
                     YearCalendar(uiState.calendarState)
                 }
             }
-
-            CalendarPanelOverlay(
-                panelAnchor = panelAnchor,
-                panelState = uiState.panelState,
-                panelLiquidState = panelLiquidState,
-                onSelect = { day, status ->
-                    onStatusSelected(day, status)
-                    onPanelDismiss()
-                },
-                onBoundsChanged = { panelBounds = it }
-            )
         }
+
+        CalendarPanelOverlay(
+            panelAnchor = panelAnchor,
+            panelState = uiState.panelState,
+            panelLiquidState = panelLiquidState,
+            onSelect = { day, status ->
+                onStatusSelected(day, status)
+                onPanelDismiss()
+            },
+            onBoundsChanged = { panelBounds = it }
+        )
     }
 }
 
@@ -555,14 +551,7 @@ fun MonthBlock(
 private fun DayCell(dayUiModel: DayUiModel) {
     Box(
         modifier = Modifier
-            .height(60.dp)
-            .background(
-                if (dayUiModel.isToday)
-                    MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
-                else
-                    Color.Transparent,
-                shape = RoundedCornerShape(10.dp),
-            ),
+            .height(60.dp),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
