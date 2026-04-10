@@ -303,12 +303,12 @@ fun MonthYearSwitcher(
     var monthBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     var yearBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
-    val progress = remember(pagerState) {
+    val progress by remember(pagerState) {
         derivedStateOf {
             (pagerState.currentPage + pagerState.currentPageOffsetFraction)
                 .coerceIn(0f, 1f)
         }
-    }.value
+    }
 
     val indicatorBounds = remember(progress, monthBounds, yearBounds) {
         val m = monthBounds
@@ -597,7 +597,9 @@ private fun MonthYearButton(
         fontSize = textSizeConst,
         fontWeight = FontWeight.Normal
     )
-    val textLayout = textMeasurer.measure(text, textStyle)
+    val textLayout = remember(text, textStyle) {
+        textMeasurer.measure(text, textStyle)
+    }
     val textWidth = textLayout.size.width.toFloat()
     val textHeight = textLayout.size.height.toFloat()
 
@@ -607,9 +609,11 @@ private fun MonthYearButton(
     val buttonWidth = textWidth + horizontalPadding * 2
     val buttonHeight = textHeight + verticalPadding * 2
 
-    val paint = Paint().apply {
-        textSize = with(density) { textSizeConst.toPx() }
-        isAntiAlias = true
+    val paint = remember(textSizeConst, density) {
+        Paint().apply {
+            textSize = with(density) { textSizeConst.toPx() }
+            isAntiAlias = true
+        }
     }
 
     val textBounds = Rect()
