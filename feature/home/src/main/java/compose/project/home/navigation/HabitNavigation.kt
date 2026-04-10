@@ -4,7 +4,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
-import compose.project.home.HabitTrackerScreen
+import compose.project.home.ui.HabitTrackerScreen
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -157,6 +157,26 @@ class HabitViewModel @Inject constructor(
         }
     }
 
+    fun onModeChanged(mode: CalendarViewMode) {
+        _uiState.update { state ->
+            state.copy(
+                switcherState = state.switcherState.copy(
+                    selectedMode = mode
+                )
+            )
+        }
+    }
+
+    private fun CalendarViewMode.page(): Int = when (this) {
+        CalendarViewMode.MONTH -> 0
+        CalendarViewMode.YEAR -> 1
+    }
+
+    private fun Int.mode(): CalendarViewMode = when (this) {
+        0 -> CalendarViewMode.MONTH
+        else -> CalendarViewMode.YEAR
+    }
+
     private fun buildMonths(selectedDate: LocalDate?): List<MonthUiModel> {
         return (-monthsBefore..monthsAfter).map { offset ->
             currentMonth.plusMonths(offset.toLong())
@@ -267,4 +287,14 @@ class HabitViewModel @Inject constructor(
 
     private val LocalDate.yearMonth: YearMonth
         get() = YearMonth.from(this)
+}
+
+fun CalendarViewMode.page(): Int = when (this) {
+    CalendarViewMode.MONTH -> 0
+    CalendarViewMode.YEAR -> 1
+}
+
+fun Int.mode(): CalendarViewMode = when (this) {
+    0 -> CalendarViewMode.MONTH
+    else -> CalendarViewMode.YEAR
 }
