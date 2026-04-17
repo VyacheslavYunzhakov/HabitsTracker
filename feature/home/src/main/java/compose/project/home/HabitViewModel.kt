@@ -24,6 +24,7 @@ import java.time.YearMonth
 
 @Immutable
 data class HabitTrackerUiState(
+    val selectedHabitId: Long = 1L,
     val switcherState: CalendarSwitcherUiState = CalendarSwitcherUiState(),
     val calendarState: CalendarUiState = CalendarUiState(),
     val panelState: HabitPanelUiState = HabitPanelUiState.Hidden
@@ -111,6 +112,26 @@ class HabitViewModel @Inject constructor(
                 state.copy(
                     calendarState = state.calendarState.copy(
                         months = state.calendarState.months.applyStatuses(habitDaysByEpochDay)
+                    )
+                )
+            }
+        }
+    }
+
+    fun onHabitSelected(id: Long) {
+        if (_uiState.value.selectedHabitId == id) return
+
+        viewModelScope.launch {
+            // Загружаем данные именно для этого habitId
+            val days = habitInteractor.getHabitDaysByHabitId(id)
+            habitDaysByEpochDay = days.associate { it.date.toEpochDay() to it.status }
+
+            _uiState.update { state ->
+                state.copy(
+                    selectedHabitId = id,
+                    calendarState = state.calendarState.copy(
+                        // Пересобираем календарь с новыми статусами
+                        months = buildMonths(state.calendarState.selectedDate).applyStatuses(habitDaysByEpochDay)
                     )
                 )
             }

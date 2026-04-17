@@ -42,6 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import compose.project.data.local.HabitEntity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -118,7 +119,8 @@ fun HabitTrackerScreen(
         onStatusSelected = { date, habitStatus -> habitViewModel.toggleHabitStatus(date, habitStatus) },
         onDayClicked = { day -> habitViewModel.onDayClicked(day) },
         onPanelDismiss = { habitViewModel.onPanelDismiss() },
-        onModeChanged = { habitViewModel.onModeChanged(it) }
+        onModeChanged = { habitViewModel.onModeChanged(it) },
+        onHabitSelected = { habitViewModel.onHabitSelected(it) }
     )
 }
 
@@ -131,6 +133,7 @@ fun HabitTrackerScreenContent(
     onDayClicked: (DayUiModel) -> Unit = { _ -> },
     onPanelDismiss: () -> Unit = {},
     onModeChanged: (CalendarViewMode) -> Unit = { _ -> },
+    onHabitSelected: (Long) -> Unit,
     ) {
 
     val pagerState = rememberPagerState(pageCount = { 2 })
@@ -148,7 +151,9 @@ fun HabitTrackerScreenContent(
             scope.launch {
                 pagerState.animateScrollToPage(mode.page())
             }
-        }
+        },
+        onHabitSelected = onHabitSelected,
+        selectedHabitId = uiState.selectedHabitId
     ) {
         CalendarWithPanel(
             uiState = uiState,
@@ -230,29 +235,37 @@ fun CalendarWithPanel(
 @Composable
 fun CalendarTabFrame(
     modifier: Modifier = Modifier,
+    selectedHabitId: Long,
+    onHabitSelected: (Long) -> Unit,
     switcherLiquidState: LiquidState,
     pagerState: PagerState,
     onModeChanged: (CalendarViewMode) -> Unit,
     content: @Composable () -> Unit,
-){
-
-    Column (
+) {
+    Column(
         modifier = modifier
             .fillMaxSize()
             .padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 0.dp),
     ) {
-        Surface(
-            modifier = Modifier,
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-            color = MaterialTheme.colorScheme.primary
-        ) {
-            HabitIcon(
-                selectorRes = R.drawable.drink_icon_selector,
-                modifier = Modifier
-                    .padding(4.dp)
-                    .size(35.dp),
-                HabitState.DEFAULT
-            )
+        Row {
+            listOf(1L, 2L, 3L).forEach { id ->
+                val isSelected = id == selectedHabitId
+                Surface(
+                    modifier = Modifier
+                        .clickable { onHabitSelected(id) },
+                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    HabitIcon(
+                        selectorRes = R.drawable.drink_icon_selector,
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(35.dp),
+                        HabitState.DEFAULT
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
         }
         Card(
             modifier = Modifier
@@ -681,7 +694,7 @@ private fun MonthYearButton(
 @Composable
 fun HabitTrackerScreenPreview() {
     HabitsTrackerTheme {
-        HabitTrackerScreenContent(previewHabitTrackerUiState())
+        HabitTrackerScreenContent(previewHabitTrackerUiState(), onHabitSelected = {})
     }
 }
 
