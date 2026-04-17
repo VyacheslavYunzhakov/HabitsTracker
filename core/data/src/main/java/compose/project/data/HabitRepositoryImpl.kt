@@ -29,4 +29,8 @@ class HabitRepositoryImpl @Inject constructor(
     override suspend fun updateHabitDay(habitDay: HabitDay) {
         habitDayDao.insert(habitDay.toEntity())
     }
+
+    override suspend fun deleteHabitById(id: Long) {
+        habitDao.deleteHabitById(id)
+    }
 }

@@ -13,4 +13,7 @@ interface HabitDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHabit(habit: HabitEntity)
+
+    @Query("DELETE FROM habits WHERE id = :id")
+    suspend fun deleteHabitById(id: Long)
 }

@@ -22,4 +22,8 @@ class HabitInteractorImpl @Inject constructor(private val habitRepository: Habit
     override suspend fun updateHabitDay(habitDay: HabitDay) {
         habitRepository.updateHabitDay(habitDay)
     }
+
+    override suspend fun deleteHabitById(id: Long) {
+        habitRepository.deleteHabitById(id)
+    }
 }

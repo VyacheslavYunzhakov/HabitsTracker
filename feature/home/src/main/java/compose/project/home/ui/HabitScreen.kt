@@ -123,7 +123,8 @@ fun HabitTrackerScreen(
         onHabitSelected = { habitViewModel.onHabitSelected(it) },
         onAddHabitClicked = { habitViewModel.onAddHabitClicked() },
         onAddHabitDismiss = { habitViewModel.onAddHabitDismiss() },
-        onCreateHabit = { habitViewModel.createHabit(it) }
+        onCreateHabit = { habitViewModel.createHabit(it) },
+        onDeleteHabit = { habitViewModel.deleteHabit(it) }
     )
 }
 
@@ -131,6 +132,7 @@ fun HabitTrackerScreen(
 fun HabitTrackerScreenContent(
     uiState: HabitTrackerUiState,
     switcherLiquidState: LiquidState = rememberLiquidState(),
+    trashLiquidState: LiquidState = rememberLiquidState(),
     panelLiquidState: LiquidState = rememberLiquidState(),
     onStatusSelected: (Long, HabitStatus) -> Unit = { _, _ -> },
     onDayClicked: (DayUiModel) -> Unit = { _ -> },
@@ -140,6 +142,7 @@ fun HabitTrackerScreenContent(
     onAddHabitClicked: () -> Unit,
     onAddHabitDismiss: () -> Unit,
     onCreateHabit: (String) -> Unit,
+    onDeleteHabit: (Long) -> Unit,
 ) {
     if (uiState.habits.isEmpty()) {
         EmptyHabitScreen(onAddHabitClicked)
@@ -153,6 +156,7 @@ fun HabitTrackerScreenContent(
 
         CalendarTabFrame(
             switcherLiquidState = switcherLiquidState,
+            trashLiquidState = trashLiquidState,
             pagerState = pagerState,
             onModeChanged = { mode ->
                 scope.launch {
@@ -162,7 +166,8 @@ fun HabitTrackerScreenContent(
             onHabitSelected = onHabitSelected,
             selectedHabitId = uiState.selectedHabitId,
             habits = uiState.habits,
-            onAddHabitClicked = onAddHabitClicked
+            onAddHabitClicked = onAddHabitClicked,
+            onDeleteHabit = onDeleteHabit
         ) {
             val selectedHabit = uiState.habits.find { it.id == uiState.selectedHabitId }
             val iconResId = getIconResId(selectedHabit?.iconResName ?: "drink_icon_selector")
@@ -170,6 +175,7 @@ fun HabitTrackerScreenContent(
             CalendarWithPanel(
                 uiState = uiState,
                 switcherLiquidState = switcherLiquidState,
+                trashLiquidState = trashLiquidState,
                 panelLiquidState = panelLiquidState,
                 onStatusSelected = onStatusSelected,
                 onDayClicked = onDayClicked,
@@ -272,6 +278,45 @@ fun IconSelectionDialog(
 }
 
 @Composable
+fun TrashCanIcon(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    trashLiquidState : LiquidState
+) {
+    val context = LocalContext.current
+    val resId = remember {
+        val id = context.resources.getIdentifier("trash_can", "drawable", context.packageName)
+        if (id == 0) R.drawable.drink_icon_selector else id
+    }
+    Surface(
+        modifier = modifier
+            .size(45.dp)
+            .liquid(trashLiquidState){
+                shape = RoundedCornerShape(100)
+                refraction = 0.5f
+                curve = 0.5f
+                edge = 0.1f
+                tint = Color.White.copy(alpha = 0.2f)
+                saturation = 1.5f
+                dispersion = 0.25f
+            }
+            .clickable { onClick() },
+        color = Color.Transparent
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            HabitIcon(
+                selectorRes = resId,
+                modifier = Modifier.size(20.dp),
+                habitState = HabitState.DEFAULT
+            )
+        }
+    }
+}
+
+@Composable
 fun getIconResId(iconName: String): Int {
     val context = LocalContext.current
     return remember(iconName) {
@@ -284,6 +329,7 @@ fun getIconResId(iconName: String): Int {
 fun CalendarWithPanel(
     uiState: HabitTrackerUiState,
     switcherLiquidState: LiquidState,
+    trashLiquidState: LiquidState,
     panelLiquidState: LiquidState,
     onStatusSelected: (Long, HabitStatus) -> Unit,
     onDayClicked: (DayUiModel) -> Unit = {},
@@ -312,7 +358,9 @@ fun CalendarWithPanel(
     ) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .liquefiable(trashLiquidState),
             beyondViewportPageCount = 1
         ) { page ->
             when (page.mode()) {
@@ -354,10 +402,12 @@ fun CalendarTabFrame(
     selectedHabitId: Long?,
     onHabitSelected: (Long) -> Unit,
     switcherLiquidState: LiquidState,
+    trashLiquidState: LiquidState,
     pagerState: PagerState,
     onModeChanged: (CalendarViewMode) -> Unit,
     habits: List<compose.project.data.local.HabitEntity>,
     onAddHabitClicked: () -> Unit,
+    onDeleteHabit: (Long) -> Unit,
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -419,6 +469,16 @@ fun CalendarTabFrame(
                     .fillMaxSize()
             ) {
                 content()
+
+                selectedHabitId?.let { id ->
+                    TrashCanIcon(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(20.dp),
+                        onClick = { onDeleteHabit(id) },
+                        trashLiquidState = trashLiquidState
+                    )
+                }
 
                 MonthYearSwitcher(
                     modifier = Modifier.align(Alignment.TopCenter),
@@ -837,7 +897,8 @@ fun HabitTrackerScreenPreview() {
             onHabitSelected = {},
             onAddHabitClicked = {},
             onAddHabitDismiss = {},
-            onCreateHabit = {}
+            onCreateHabit = {},
+            onDeleteHabit = {}
         )
     }
 }

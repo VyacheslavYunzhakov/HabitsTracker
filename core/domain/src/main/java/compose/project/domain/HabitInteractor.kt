@@ -9,4 +9,5 @@ interface HabitInteractor {
     suspend fun insertHabit(habit: HabitEntity)
     suspend fun getHabitDaysByHabitId(habitId: Long): List<HabitDay>
     suspend fun updateHabitDay(habitDay: HabitDay)
+    suspend fun deleteHabitById(id: Long)
 }

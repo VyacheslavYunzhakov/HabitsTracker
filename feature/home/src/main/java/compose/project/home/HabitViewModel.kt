@@ -111,7 +111,10 @@ class HabitViewModel @Inject constructor(
 
     fun onHabitSelected(id: Long) {
         if (_uiState.value.selectedHabitId == id) return
+        selectHabit(id)
+    }
 
+    private fun selectHabit(id: Long) {
         viewModelScope.launch {
             val days = habitInteractor.getHabitDaysByHabitId(id)
             habitDaysByEpochDay = days.associate { it.date.toEpochDay() to it.status }
@@ -143,6 +146,38 @@ class HabitViewModel @Inject constructor(
             )
             habitInteractor.insertHabit(newHabit)
             _uiState.update { it.copy(showAddHabitSelection = false) }
+        }
+    }
+
+    fun deleteHabit(id: Long) {
+        viewModelScope.launch {
+            val wasSelected = _uiState.value.selectedHabitId == id
+            habitInteractor.deleteHabitById(id)
+            
+            _uiState.update { state ->
+                val newHabits = state.habits.filter { it.id != id }
+                val nextId = if (wasSelected) newHabits.firstOrNull()?.id else state.selectedHabitId
+                state.copy(
+                    habits = newHabits,
+                    selectedHabitId = nextId
+                )
+            }
+
+            if (wasSelected) {
+                _uiState.value.selectedHabitId?.let { newId ->
+                    selectHabit(newId)
+                } ?: run {
+                    // Если привычек больше нет, очищаем статусы
+                    habitDaysByEpochDay = emptyMap()
+                    _uiState.update { state ->
+                        state.copy(
+                            calendarState = state.calendarState.copy(
+                                months = buildMonths(state.calendarState.selectedDate).applyStatuses(habitDaysByEpochDay)
+                            )
+                        )
+                    }
+                }
+            }
         }
     }
 
