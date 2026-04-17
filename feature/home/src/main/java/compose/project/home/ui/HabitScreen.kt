@@ -56,6 +56,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextMeasurer
@@ -119,7 +120,10 @@ fun HabitTrackerScreen(
         onDayClicked = { day -> habitViewModel.onDayClicked(day) },
         onPanelDismiss = { habitViewModel.onPanelDismiss() },
         onModeChanged = { habitViewModel.onModeChanged(it) },
-        onHabitSelected = { habitViewModel.onHabitSelected(it) }
+        onHabitSelected = { habitViewModel.onHabitSelected(it) },
+        onAddHabitClicked = { habitViewModel.onAddHabitClicked() },
+        onAddHabitDismiss = { habitViewModel.onAddHabitDismiss() },
+        onCreateHabit = { habitViewModel.createHabit(it) }
     )
 }
 
@@ -133,36 +137,146 @@ fun HabitTrackerScreenContent(
     onPanelDismiss: () -> Unit = {},
     onModeChanged: (CalendarViewMode) -> Unit = { _ -> },
     onHabitSelected: (Long) -> Unit,
-    ) {
+    onAddHabitClicked: () -> Unit,
+    onAddHabitDismiss: () -> Unit,
+    onCreateHabit: (String) -> Unit,
+) {
+    if (uiState.habits.isEmpty()) {
+        EmptyHabitScreen(onAddHabitClicked)
+    } else {
+        val pagerState = rememberPagerState(pageCount = { 2 })
+        val scope = rememberCoroutineScope()
 
-    val pagerState = rememberPagerState(pageCount = { 2 })
-    val scope = rememberCoroutineScope()
+        LaunchedEffect(pagerState.settledPage) {
+            onModeChanged(pagerState.settledPage.mode())
+        }
 
-    LaunchedEffect(pagerState.settledPage) {
-        onModeChanged(pagerState.settledPage.mode())
+        CalendarTabFrame(
+            switcherLiquidState = switcherLiquidState,
+            pagerState = pagerState,
+            onModeChanged = { mode ->
+                scope.launch {
+                    pagerState.animateScrollToPage(mode.page())
+                }
+            },
+            onHabitSelected = onHabitSelected,
+            selectedHabitId = uiState.selectedHabitId,
+            habits = uiState.habits,
+            onAddHabitClicked = onAddHabitClicked
+        ) {
+            val selectedHabit = uiState.habits.find { it.id == uiState.selectedHabitId }
+            val iconResId = getIconResId(selectedHabit?.iconResName ?: "drink_icon_selector")
+
+            CalendarWithPanel(
+                uiState = uiState,
+                switcherLiquidState = switcherLiquidState,
+                panelLiquidState = panelLiquidState,
+                onStatusSelected = onStatusSelected,
+                onDayClicked = onDayClicked,
+                onPanelDismiss = onPanelDismiss,
+                pagerState = pagerState,
+                iconResId = iconResId
+            )
+        }
     }
 
-
-    CalendarTabFrame(
-        switcherLiquidState = switcherLiquidState,
-        pagerState = pagerState,
-        onModeChanged = { mode ->
-            scope.launch {
-                pagerState.animateScrollToPage(mode.page())
-            }
-        },
-        onHabitSelected = onHabitSelected,
-        selectedHabitId = uiState.selectedHabitId
-    ) {
-        CalendarWithPanel(
-            uiState = uiState,
-            switcherLiquidState = switcherLiquidState,
-            panelLiquidState = panelLiquidState,
-            onStatusSelected = onStatusSelected,
-            onDayClicked = onDayClicked,
-            onPanelDismiss = onPanelDismiss,
-            pagerState = pagerState,
+    if (uiState.showAddHabitSelection) {
+        IconSelectionDialog(
+            onDismiss = onAddHabitDismiss,
+            onIconSelected = onCreateHabit
         )
+    }
+}
+
+@Composable
+fun EmptyHabitScreen(onAddHabitClicked: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .size(150.dp)
+                .clickable { onAddHabitClicked() },
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "+",
+                    fontSize = 80.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Light
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun IconSelectionDialog(
+    onDismiss: () -> Unit,
+    onIconSelected: (String) -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Выберите привычку",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                val icons = listOf(
+                    "drink_icon_selector",
+                    "sport_icon_selector",
+                    "cannabis_icon_selector",
+                    "run_icon_selector"
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    icons.forEach { iconName ->
+                        val resId = getIconResId(iconName)
+                        Surface(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clickable { onIconSelected(iconName) },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                HabitIcon(
+                                    selectorRes = resId,
+                                    modifier = Modifier.size(40.dp),
+                                    habitState = HabitState.DEFAULT
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun getIconResId(iconName: String): Int {
+    val context = LocalContext.current
+    return remember(iconName) {
+        val id = context.resources.getIdentifier(iconName, "drawable", context.packageName)
+        if (id == 0) R.drawable.drink_icon_selector else id
     }
 }
 
@@ -174,7 +288,8 @@ fun CalendarWithPanel(
     onStatusSelected: (Long, HabitStatus) -> Unit,
     onDayClicked: (DayUiModel) -> Unit = {},
     onPanelDismiss: () -> Unit,
-    pagerState: PagerState
+    pagerState: PagerState,
+    iconResId: Int
 ) {
     var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
     var panelBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
@@ -205,6 +320,7 @@ fun CalendarWithPanel(
                     VerticalCalendarList(
                         calendarState = uiState.calendarState,
                         panelLiquidState = panelLiquidState,
+                        iconResId = iconResId,
                         onDayClick = { day, x, y ->
                             onDayClicked(day)
                             panelAnchor = PanelAnchor(day = day, x = x, y = y)
@@ -226,7 +342,8 @@ fun CalendarWithPanel(
                 onStatusSelected(day, status)
                 onPanelDismiss()
             },
-            onBoundsChanged = { panelBounds = it }
+            onBoundsChanged = { panelBounds = it },
+            iconResId = iconResId
         )
     }
 }
@@ -234,11 +351,13 @@ fun CalendarWithPanel(
 @Composable
 fun CalendarTabFrame(
     modifier: Modifier = Modifier,
-    selectedHabitId: Long,
+    selectedHabitId: Long?,
     onHabitSelected: (Long) -> Unit,
     switcherLiquidState: LiquidState,
     pagerState: PagerState,
     onModeChanged: (CalendarViewMode) -> Unit,
+    habits: List<compose.project.data.local.HabitEntity>,
+    onAddHabitClicked: () -> Unit,
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -247,16 +366,16 @@ fun CalendarTabFrame(
             .padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 0.dp),
     ) {
         Row {
-            listOf(1L, 2L, 3L).forEach { id ->
-                val isSelected = id == selectedHabitId
+            habits.forEach { habit ->
+                val isSelected = habit.id == selectedHabitId
                 Surface(
                     modifier = Modifier
-                        .clickable { onHabitSelected(id) },
+                        .clickable { onHabitSelected(habit.id) },
                     shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
                 ) {
                     HabitIcon(
-                        selectorRes = R.drawable.drink_icon_selector,
+                        selectorRes = getIconResId(habit.iconResName),
                         modifier = Modifier
                             .padding(4.dp)
                             .size(35.dp),
@@ -264,6 +383,22 @@ fun CalendarTabFrame(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
+            }
+            // Плюсик в конце вкладок
+            Surface(
+                modifier = Modifier
+                    .clickable { onAddHabitClicked() },
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .size(35.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "+", fontSize = 24.sp, color = MaterialTheme.colorScheme.primary)
+                }
             }
         }
         Card(
@@ -408,7 +543,8 @@ fun VerticalCalendarList(
     calendarState: CalendarUiState,
     onDayClick: (DayUiModel, Float, Float) -> Unit,
     monthsBefore: Int = 12,
-    panelLiquidState: LiquidState
+    panelLiquidState: LiquidState,
+    iconResId: Int
 ) {
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = monthsBefore)
@@ -428,7 +564,8 @@ fun VerticalCalendarList(
                 MonthBlock(
                     monthUiModel=month,
                     onDayClick = { day, x, y -> onDayClick(day, x, y)
-                    }
+                    },
+                    iconResId = iconResId
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -439,7 +576,8 @@ fun VerticalCalendarList(
 @Composable
 fun MonthBlock(
     monthUiModel: MonthUiModel,
-    onDayClick: (DayUiModel, Float, Float) -> Unit
+    onDayClick: (DayUiModel, Float, Float) -> Unit,
+    iconResId: Int
 ) {
 
     val monthYearFormatter = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())
@@ -547,7 +685,8 @@ fun MonthBlock(
                                     )
                                 } else {
                                     DayCell(
-                                        dayUiModel
+                                        dayUiModel,
+                                        iconResId = iconResId
                                     )
                                 }
                             }
@@ -560,7 +699,7 @@ fun MonthBlock(
 }
 
 @Composable
-private fun DayCell(dayUiModel: DayUiModel) {
+private fun DayCell(dayUiModel: DayUiModel, iconResId: Int) {
     Box(
         modifier = Modifier
             .height(60.dp),
@@ -574,7 +713,7 @@ private fun DayCell(dayUiModel: DayUiModel) {
                 else MaterialTheme.colorScheme.onSurface
             )
             HabitIcon(
-                selectorRes = R.drawable.drink_icon_selector,
+                selectorRes = iconResId,
                 habitStatus = dayUiModel.habitStatus,
                 modifier = Modifier.size(35.dp)
             )
@@ -693,7 +832,13 @@ private fun MonthYearButton(
 @Composable
 fun HabitTrackerScreenPreview() {
     HabitsTrackerTheme {
-        HabitTrackerScreenContent(previewHabitTrackerUiState(), onHabitSelected = {})
+        HabitTrackerScreenContent(
+            previewHabitTrackerUiState(),
+            onHabitSelected = {},
+            onAddHabitClicked = {},
+            onAddHabitDismiss = {},
+            onCreateHabit = {}
+        )
     }
 }
 

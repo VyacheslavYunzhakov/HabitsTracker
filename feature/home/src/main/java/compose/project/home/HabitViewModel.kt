@@ -12,9 +12,6 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import androidx.compose.runtime.Immutable
-import androidx.lifecycle.SavedStateHandle
-import androidx.navigation.toRoute
-import compose.project.home.navigation.HabitRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,10 +21,12 @@ import java.time.YearMonth
 
 @Immutable
 data class HabitTrackerUiState(
-    val selectedHabitId: Long = 1L,
+    val habits: List<compose.project.data.local.HabitEntity> = emptyList(),
+    val selectedHabitId: Long? = null,
     val switcherState: CalendarSwitcherUiState = CalendarSwitcherUiState(),
     val calendarState: CalendarUiState = CalendarUiState(),
-    val panelState: HabitPanelUiState = HabitPanelUiState.Hidden
+    val panelState: HabitPanelUiState = HabitPanelUiState.Hidden,
+    val showAddHabitSelection: Boolean = false
 )
 
 @Immutable
@@ -78,12 +77,8 @@ data class DayUiModel(
 
 @HiltViewModel
 class HabitViewModel @Inject constructor(
-    private val habitInteractor: HabitInteractor,
-    savedStateHandle: SavedStateHandle
+    private val habitInteractor: HabitInteractor
 ) : ViewModel() {
-
-    private val habitRoute = savedStateHandle.toRoute<HabitRoute>()
-    private val habitId = habitRoute.habitId
 
     private val currentMonth = YearMonth.now()
     private val monthsBefore = 12
@@ -105,15 +100,11 @@ class HabitViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val days = habitInteractor.getHabitDaysByHabitId(habitId)
-            habitDaysByEpochDay = days.associate { it.date.toEpochDay() to it.status }
-
-            _uiState.update { state ->
-                state.copy(
-                    calendarState = state.calendarState.copy(
-                        months = state.calendarState.months.applyStatuses(habitDaysByEpochDay)
-                    )
-                )
+            habitInteractor.getAllHabits().collect { habits ->
+                _uiState.update { it.copy(habits = habits) }
+                if (habits.isNotEmpty() && _uiState.value.selectedHabitId == null) {
+                    onHabitSelected(habits.first().id)
+                }
             }
         }
     }
@@ -122,7 +113,6 @@ class HabitViewModel @Inject constructor(
         if (_uiState.value.selectedHabitId == id) return
 
         viewModelScope.launch {
-            // Загружаем данные именно для этого habitId
             val days = habitInteractor.getHabitDaysByHabitId(id)
             habitDaysByEpochDay = days.associate { it.date.toEpochDay() to it.status }
 
@@ -130,11 +120,29 @@ class HabitViewModel @Inject constructor(
                 state.copy(
                     selectedHabitId = id,
                     calendarState = state.calendarState.copy(
-                        // Пересобираем календарь с новыми статусами
                         months = buildMonths(state.calendarState.selectedDate).applyStatuses(habitDaysByEpochDay)
                     )
                 )
             }
+        }
+    }
+
+    fun onAddHabitClicked() {
+        _uiState.update { it.copy(showAddHabitSelection = true) }
+    }
+
+    fun onAddHabitDismiss() {
+        _uiState.update { it.copy(showAddHabitSelection = false) }
+    }
+
+    fun createHabit(iconResName: String) {
+        viewModelScope.launch {
+            val newHabit = compose.project.data.local.HabitEntity(
+                name = iconResName.substringBefore("_icon_selector").replaceFirstChar { it.uppercase() },
+                iconResName = iconResName
+            )
+            habitInteractor.insertHabit(newHabit)
+            _uiState.update { it.copy(showAddHabitSelection = false) }
         }
     }
 
@@ -154,11 +162,12 @@ class HabitViewModel @Inject constructor(
 
     fun toggleHabitStatus(epochDay: Long, habitStatus: HabitStatus) {
         val date = LocalDate.ofEpochDay(epochDay)
+        val currentHabitId = _uiState.value.selectedHabitId ?: return
 
         viewModelScope.launch {
             habitInteractor.updateHabitDay(
                 HabitDay(
-                    habitId = habitId,
+                    habitId = currentHabitId,
                     status = habitStatus,
                     date = date,
                     createdAt = Instant.now()
@@ -186,16 +195,6 @@ class HabitViewModel @Inject constructor(
                 )
             )
         }
-    }
-
-    private fun CalendarViewMode.page(): Int = when (this) {
-        CalendarViewMode.MONTH -> 0
-        CalendarViewMode.YEAR -> 1
-    }
-
-    private fun Int.mode(): CalendarViewMode = when (this) {
-        0 -> CalendarViewMode.MONTH
-        else -> CalendarViewMode.YEAR
     }
 
     private fun buildMonths(selectedDate: LocalDate?): List<MonthUiModel> {
