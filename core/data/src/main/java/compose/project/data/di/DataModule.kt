@@ -2,8 +2,6 @@ package compose.project.data.di
 
 import android.content.Context
 import androidx.room.Room
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 import compose.project.data.HabitRepository
 import compose.project.data.HabitRepositoryImpl
 import compose.project.data.local.HabitDao

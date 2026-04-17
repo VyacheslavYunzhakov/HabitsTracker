@@ -1,8 +1,8 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <item app:state_completed="true" android:drawable="@drawable/winecolor_green"/>
-    <item app:state_missed="true" android:drawable="@drawable/winecolor_red"/>
-    <item app:state_unmarked="true" android:drawable="@drawable/winecolor_grey"/>
-    <item android:drawable="@drawable/winecolor_black" />
+    <item app:state_completed="true" android:drawable="@drawable/sport_color_green"/>
+    <item app:state_missed="true" android:drawable="@drawable/sport_color_red"/>
+    <item app:state_unmarked="true" android:drawable="@drawable/sport_color_grey"/>
+    <item android:drawable="@drawable/sport_color_black" />
 </selector>
