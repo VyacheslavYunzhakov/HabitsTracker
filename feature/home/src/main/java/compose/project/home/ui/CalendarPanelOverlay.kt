@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import compose.project.designsystem.HabitIconType
 import compose.project.data.model.HabitStatus
-import compose.project.designsystem.R
 import compose.project.home.HabitIcon
 import compose.project.home.HabitPanelUiState
 import compose.project.home.HabitState
@@ -51,7 +51,8 @@ fun CalendarPanelOverlay(
     panelState: HabitPanelUiState,
     onSelect: (Long, HabitStatus) -> Unit,
     onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit,
-    panelLiquidState: LiquidState
+    panelLiquidState: LiquidState,
+    iconType: HabitIconType
 ) {
     panelAnchor?.let { anchor ->
         val density = LocalDensity.current
@@ -129,11 +130,12 @@ fun CalendarPanelOverlay(
                             HabitState.COMPLETED -> HabitStatus.COMPLETED
                             HabitState.MISSED -> HabitStatus.MISSED
                             HabitState.UNMARKED -> HabitStatus.UNMARKED
-                            HabitState.DEFAULT -> return@HabitStatePanel
+                            else -> HabitStatus.UNMARKED
                         }
                         onSelect(anchor.day.epochDay, status)
                     },
-                    panelLiquidState = panelLiquidState
+                    panelLiquidState = panelLiquidState,
+                    iconType = iconType
                 )
             }
         }
@@ -147,7 +149,8 @@ private fun HabitStatePanel(
     widthDp: Dp,
     targetWidth: Dp,
     onSelect: (HabitState) -> Unit,
-    panelLiquidState: LiquidState
+    panelLiquidState: LiquidState,
+    iconType: HabitIconType
 ) {
     val states = remember(selectedStatus, direction) {
         buildOrderedStates(selectedStatus, direction)
@@ -187,7 +190,7 @@ private fun HabitStatePanel(
                             contentAlignment = Alignment.Center
                         ) {
                             HabitIcon(
-                                selectorRes = R.drawable.drink_icon_selector,
+                                iconType = iconType,
                                 habitState = state,
                                 modifier = Modifier.size(35.dp)
                             )
@@ -201,7 +204,8 @@ private fun HabitStatePanel(
                     states = states,
                     widthDp = widthDp,
                     targetWidth = targetWidth,
-                    onSelect = onSelect
+                    onSelect = onSelect,
+                    iconType = iconType
                 )
             }
         }
@@ -213,7 +217,8 @@ private fun RevealEndByWidth(
     states: List<HabitState>,
     widthDp: Dp,
     targetWidth: Dp,
-    onSelect: (HabitState) -> Unit
+    onSelect: (HabitState) -> Unit,
+    iconType: HabitIconType
 ) {
     val density = LocalDensity.current
 
@@ -242,7 +247,8 @@ private fun RevealEndByWidth(
             x = x2,
             widthPx = iconPx,
             iconSize = iconSize,
-            onSelect = onSelect
+            onSelect = onSelect,
+            iconType = iconType
         )
 
         if (w1 > 0f) {
@@ -251,7 +257,8 @@ private fun RevealEndByWidth(
                 x = x1,
                 widthPx = w1,
                 iconSize = iconSize,
-                onSelect = onSelect
+                onSelect = onSelect,
+                iconType = iconType
             )
         }
 
@@ -261,7 +268,8 @@ private fun RevealEndByWidth(
                 x = x0,
                 widthPx = w0,
                 iconSize = iconSize,
-                onSelect = onSelect
+                onSelect = onSelect,
+                iconType = iconType
             )
         }
     }
@@ -273,7 +281,8 @@ private fun IconCellAtWidth(
     x: Float,
     widthPx: Float,
     iconSize: Dp,
-    onSelect: (HabitState) -> Unit
+    onSelect: (HabitState) -> Unit,
+    iconType: HabitIconType
 ) {
     val density = LocalDensity.current
 
@@ -295,7 +304,7 @@ private fun IconCellAtWidth(
             contentAlignment = Alignment.Center
         ) {
             HabitIcon(
-                selectorRes = R.drawable.drink_icon_selector,
+                iconType = iconType,
                 habitState = state,
                 modifier = Modifier.size(35.dp)
             )
@@ -311,7 +320,7 @@ private fun buildOrderedStates(
         HabitStatus.COMPLETED -> HabitState.COMPLETED
         HabitStatus.MISSED -> HabitState.MISSED
         HabitStatus.UNMARKED -> HabitState.UNMARKED
-        null -> HabitState.COMPLETED
+        else -> HabitState.COMPLETED
     }
 
     val others = listOf(

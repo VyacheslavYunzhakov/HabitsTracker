@@ -2,4 +2,5 @@
 <resources>
     <string name="month_switcher_month">Месяц</string>
     <string name="month_switcher_year">Год</string>
+    <string name="Choose_a_habit">Выберите привычку</string>
 </resources>

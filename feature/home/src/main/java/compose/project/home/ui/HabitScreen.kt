@@ -71,7 +71,7 @@ import androidx.compose.ui.util.lerp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import compose.project.data.model.HabitStatus
-import compose.project.designsystem.R
+import compose.project.designsystem.HabitIconType
 import compose.project.designsystem.theme.HabitsTrackerTheme
 import compose.project.home.CalendarSwitcherUiState
 import compose.project.home.CalendarUiState
@@ -118,7 +118,12 @@ fun HabitTrackerScreen(
         onStatusSelected = { date, habitStatus -> habitViewModel.toggleHabitStatus(date, habitStatus) },
         onDayClicked = { day -> habitViewModel.onDayClicked(day) },
         onPanelDismiss = { habitViewModel.onPanelDismiss() },
-        onModeChanged = { habitViewModel.onModeChanged(it) }
+        onModeChanged = { habitViewModel.onModeChanged(it) },
+        onHabitSelected = { habitViewModel.onHabitSelected(it) },
+        onAddHabitClicked = { habitViewModel.onAddHabitClicked() },
+        onAddHabitDismiss = { habitViewModel.onAddHabitDismiss() },
+        onCreateHabit = { habitViewModel.createHabit(it) },
+        onDeleteHabit = { habitViewModel.deleteHabit(it) }
     )
 }
 
@@ -126,39 +131,176 @@ fun HabitTrackerScreen(
 fun HabitTrackerScreenContent(
     uiState: HabitTrackerUiState,
     switcherLiquidState: LiquidState = rememberLiquidState(),
+    trashLiquidState: LiquidState = rememberLiquidState(),
     panelLiquidState: LiquidState = rememberLiquidState(),
     onStatusSelected: (Long, HabitStatus) -> Unit = { _, _ -> },
     onDayClicked: (DayUiModel) -> Unit = { _ -> },
     onPanelDismiss: () -> Unit = {},
     onModeChanged: (CalendarViewMode) -> Unit = { _ -> },
-    ) {
+    onHabitSelected: (Long) -> Unit,
+    onAddHabitClicked: () -> Unit,
+    onAddHabitDismiss: () -> Unit,
+    onCreateHabit: (String) -> Unit,
+    onDeleteHabit: (Long) -> Unit,
+) {
+    if (uiState.habits.isEmpty()) {
+        EmptyHabitScreen(onAddHabitClicked)
+    } else {
+        val pagerState = rememberPagerState(pageCount = { 2 })
+        val scope = rememberCoroutineScope()
 
-    val pagerState = rememberPagerState(pageCount = { 2 })
-    val scope = rememberCoroutineScope()
+        LaunchedEffect(pagerState.settledPage) {
+            onModeChanged(pagerState.settledPage.mode())
+        }
 
-    LaunchedEffect(pagerState.settledPage) {
-        onModeChanged(pagerState.settledPage.mode())
+        CalendarTabFrame(
+            switcherLiquidState = switcherLiquidState,
+            trashLiquidState = trashLiquidState,
+            pagerState = pagerState,
+            onModeChanged = { mode ->
+                scope.launch {
+                    pagerState.animateScrollToPage(mode.page())
+                }
+            },
+            onHabitSelected = onHabitSelected,
+            selectedHabitId = uiState.selectedHabitId,
+            habits = uiState.habits,
+            onAddHabitClicked = onAddHabitClicked,
+            onDeleteHabit = onDeleteHabit
+        ) {
+            val selectedHabit = uiState.habits.find { it.id == uiState.selectedHabitId }
+            val iconType = HabitIconType.fromName(selectedHabit?.iconResName ?: "drink_icon_selector")
+
+            CalendarWithPanel(
+                uiState = uiState,
+                switcherLiquidState = switcherLiquidState,
+                trashLiquidState = trashLiquidState,
+                panelLiquidState = panelLiquidState,
+                onStatusSelected = onStatusSelected,
+                onDayClicked = onDayClicked,
+                onPanelDismiss = onPanelDismiss,
+                pagerState = pagerState,
+                iconType = iconType
+            )
+        }
     }
 
+    if (uiState.showAddHabitSelection) {
+        IconSelectionDialog(
+            onDismiss = onAddHabitDismiss,
+            onIconSelected = onCreateHabit
+        )
+    }
+}
 
-    CalendarTabFrame(
-        switcherLiquidState = switcherLiquidState,
-        pagerState = pagerState,
-        onModeChanged = { mode ->
-            scope.launch {
-                pagerState.animateScrollToPage(mode.page())
+@Composable
+fun EmptyHabitScreen(onAddHabitClicked: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .size(150.dp)
+                .clickable { onAddHabitClicked() },
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "+",
+                    fontSize = 80.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Light
+                )
             }
         }
+    }
+}
+
+@Composable
+fun IconSelectionDialog(
+    onDismiss: () -> Unit,
+    onIconSelected: (String) -> Unit
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(compose.project.home.R.string.Choose_a_habit),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                val icons = HabitIconType.entries.filter { it != HabitIconType.TRASH }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    icons.forEach { iconType ->
+                        Surface(
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clickable { onIconSelected(iconType.iconName) },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                HabitIcon(
+                                    iconType = iconType,
+                                    modifier = Modifier.size(40.dp),
+                                    habitState = HabitState.DEFAULT
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TrashCanIcon(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    trashLiquidState : LiquidState
+) {
+    Surface(
+        modifier = modifier
+            .size(45.dp)
+            .liquid(trashLiquidState) {
+                shape = RoundedCornerShape(100)
+                refraction = 0.5f
+                curve = 0.5f
+                edge = 0.1f
+                tint = Color.White.copy(alpha = 0.2f)
+                saturation = 1.5f
+                dispersion = 0.25f
+            }
+            .clickable { onClick() },
+        color = Color.Transparent
     ) {
-        CalendarWithPanel(
-            uiState = uiState,
-            switcherLiquidState = switcherLiquidState,
-            panelLiquidState = panelLiquidState,
-            onStatusSelected = onStatusSelected,
-            onDayClicked = onDayClicked,
-            onPanelDismiss = onPanelDismiss,
-            pagerState = pagerState,
-        )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            HabitIcon(
+                iconType = HabitIconType.TRASH,
+                modifier = Modifier.size(20.dp),
+                habitState = HabitState.DEFAULT
+            )
+        }
     }
 }
 
@@ -166,11 +308,13 @@ fun HabitTrackerScreenContent(
 fun CalendarWithPanel(
     uiState: HabitTrackerUiState,
     switcherLiquidState: LiquidState,
+    trashLiquidState: LiquidState,
     panelLiquidState: LiquidState,
     onStatusSelected: (Long, HabitStatus) -> Unit,
     onDayClicked: (DayUiModel) -> Unit = {},
     onPanelDismiss: () -> Unit,
-    pagerState: PagerState
+    pagerState: PagerState,
+    iconType: HabitIconType
 ) {
     var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
     var panelBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
@@ -193,7 +337,9 @@ fun CalendarWithPanel(
     ) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .liquefiable(trashLiquidState),
             beyondViewportPageCount = 1
         ) { page ->
             when (page.mode()) {
@@ -201,6 +347,7 @@ fun CalendarWithPanel(
                     VerticalCalendarList(
                         calendarState = uiState.calendarState,
                         panelLiquidState = panelLiquidState,
+                        iconType = iconType,
                         onDayClick = { day, x, y ->
                             onDayClicked(day)
                             panelAnchor = PanelAnchor(day = day, x = x, y = y)
@@ -222,7 +369,8 @@ fun CalendarWithPanel(
                 onStatusSelected(day, status)
                 onPanelDismiss()
             },
-            onBoundsChanged = { panelBounds = it }
+            onBoundsChanged = { panelBounds = it },
+            iconType = iconType
         )
     }
 }
@@ -230,29 +378,58 @@ fun CalendarWithPanel(
 @Composable
 fun CalendarTabFrame(
     modifier: Modifier = Modifier,
+    selectedHabitId: Long?,
+    onHabitSelected: (Long) -> Unit,
     switcherLiquidState: LiquidState,
+    trashLiquidState: LiquidState,
     pagerState: PagerState,
     onModeChanged: (CalendarViewMode) -> Unit,
+    habits: List<compose.project.data.local.HabitEntity>,
+    onAddHabitClicked: () -> Unit,
+    onDeleteHabit: (Long) -> Unit,
     content: @Composable () -> Unit,
-){
-
-    Column (
+) {
+    Column(
         modifier = modifier
             .fillMaxSize()
             .padding(start = 16.dp, end = 16.dp, top = 26.dp, bottom = 0.dp),
     ) {
-        Surface(
-            modifier = Modifier,
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-            color = MaterialTheme.colorScheme.primary
-        ) {
-            HabitIcon(
-                selectorRes = R.drawable.drink_icon_selector,
+        Row {
+            habits.forEach { habit ->
+                val isSelected = habit.id == selectedHabitId
+                val iconType = HabitIconType.fromName(habit.iconResName)
+                Surface(
+                    modifier = Modifier
+                        .clickable { onHabitSelected(habit.id) },
+                    shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    HabitIcon(
+                        iconType = iconType,
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(35.dp),
+                        HabitState.DEFAULT
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+            // Плюсик в конце вкладок
+            Surface(
                 modifier = Modifier
-                    .padding(4.dp)
-                    .size(35.dp),
-                HabitState.DEFAULT
-            )
+                    .clickable { onAddHabitClicked() },
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .size(35.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "+", fontSize = 24.sp, color = MaterialTheme.colorScheme.primary)
+                }
+            }
         }
         Card(
             modifier = Modifier
@@ -272,6 +449,16 @@ fun CalendarTabFrame(
                     .fillMaxSize()
             ) {
                 content()
+
+                selectedHabitId?.let { id ->
+                    TrashCanIcon(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(20.dp),
+                        onClick = { onDeleteHabit(id) },
+                        trashLiquidState = trashLiquidState
+                    )
+                }
 
                 MonthYearSwitcher(
                     modifier = Modifier.align(Alignment.TopCenter),
@@ -396,7 +583,8 @@ fun VerticalCalendarList(
     calendarState: CalendarUiState,
     onDayClick: (DayUiModel, Float, Float) -> Unit,
     monthsBefore: Int = 12,
-    panelLiquidState: LiquidState
+    panelLiquidState: LiquidState,
+    iconType: HabitIconType
 ) {
 
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = monthsBefore)
@@ -416,7 +604,8 @@ fun VerticalCalendarList(
                 MonthBlock(
                     monthUiModel=month,
                     onDayClick = { day, x, y -> onDayClick(day, x, y)
-                    }
+                    },
+                    iconType = iconType
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -427,7 +616,8 @@ fun VerticalCalendarList(
 @Composable
 fun MonthBlock(
     monthUiModel: MonthUiModel,
-    onDayClick: (DayUiModel, Float, Float) -> Unit
+    onDayClick: (DayUiModel, Float, Float) -> Unit,
+    iconType: HabitIconType
 ) {
 
     val monthYearFormatter = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())
@@ -535,7 +725,8 @@ fun MonthBlock(
                                     )
                                 } else {
                                     DayCell(
-                                        dayUiModel
+                                        dayUiModel,
+                                        iconType = iconType
                                     )
                                 }
                             }
@@ -548,7 +739,7 @@ fun MonthBlock(
 }
 
 @Composable
-private fun DayCell(dayUiModel: DayUiModel) {
+private fun DayCell(dayUiModel: DayUiModel, iconType: HabitIconType) {
     Box(
         modifier = Modifier
             .height(60.dp),
@@ -562,7 +753,7 @@ private fun DayCell(dayUiModel: DayUiModel) {
                 else MaterialTheme.colorScheme.onSurface
             )
             HabitIcon(
-                selectorRes = R.drawable.drink_icon_selector,
+                iconType = iconType,
                 habitStatus = dayUiModel.habitStatus,
                 modifier = Modifier.size(35.dp)
             )
@@ -681,7 +872,14 @@ private fun MonthYearButton(
 @Composable
 fun HabitTrackerScreenPreview() {
     HabitsTrackerTheme {
-        HabitTrackerScreenContent(previewHabitTrackerUiState())
+        HabitTrackerScreenContent(
+            previewHabitTrackerUiState(),
+            onHabitSelected = {},
+            onAddHabitClicked = {},
+            onAddHabitDismiss = {},
+            onCreateHabit = {},
+            onDeleteHabit = {}
+        )
     }
 }
 

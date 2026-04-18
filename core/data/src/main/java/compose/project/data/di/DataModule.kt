@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import compose.project.data.HabitRepository
 import compose.project.data.HabitRepositoryImpl
+import compose.project.data.local.HabitDao
 import compose.project.data.local.HabitDayDao
 import compose.project.data.local.HabitTrackerDatabase
 import dagger.Module
@@ -24,12 +25,17 @@ object DataModule {
             context,
             HabitTrackerDatabase::class.java,
             "habit_tracker.db",
-        ).build()
+        ).addMigrations(HabitTrackerDatabase.MIGRATION_1_2)
+            .build()
     }
 
     @Provides
     fun provideHabitDayDao(database: HabitTrackerDatabase): HabitDayDao = database.habitDayDao()
 
     @Provides
-    fun provideHabitRepository(habitDayDao: HabitDayDao): HabitRepository = HabitRepositoryImpl(habitDayDao)
+    fun provideHabitDao(database: HabitTrackerDatabase): HabitDao = database.habitDao()
+
+    @Provides
+    fun provideHabitRepository(habitDayDao: HabitDayDao, habitDao: HabitDao): HabitRepository = HabitRepositoryImpl(habitDayDao, habitDao)
+
 }
