@@ -1,6 +1,5 @@
 package compose.project.home
 
-import androidx.annotation.DrawableRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
@@ -10,19 +9,20 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
+import compose.project.designsystem.HabitIconType
 import compose.project.data.model.HabitStatus
 import compose.project.designsystem.R
 import kotlin.math.roundToInt
 
 @Composable
 fun HabitIcon(
-    @DrawableRes selectorRes: Int,
+    iconType: HabitIconType,
     modifier: Modifier = Modifier,
     habitState: HabitState
 ) {
     val context = LocalContext.current
-    val drawable = remember(selectorRes, context) {
-        requireNotNull(AppCompatResources.getDrawable(context, selectorRes)).mutate()
+    val drawable = remember(iconType, context) {
+        requireNotNull(AppCompatResources.getDrawable(context, iconType.resId)).mutate()
     }
 
     Spacer(
@@ -49,14 +49,14 @@ fun HabitIcon(
 
 @Composable
 fun HabitIcon(
-    @DrawableRes selectorRes: Int,
+    iconType: HabitIconType,
     habitStatus: HabitStatus?,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
 
-    val drawable = remember(selectorRes, context) {
-        requireNotNull(AppCompatResources.getDrawable(context, selectorRes)).mutate()
+    val drawable = remember(iconType, context) {
+        requireNotNull(AppCompatResources.getDrawable(context, iconType.resId)).mutate()
     }
 
     val stateSet = remember(habitStatus) {

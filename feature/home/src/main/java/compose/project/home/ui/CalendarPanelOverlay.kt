@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import compose.project.designsystem.HabitIconType
 import compose.project.data.model.HabitStatus
-import compose.project.designsystem.R
 import compose.project.home.HabitIcon
 import compose.project.home.HabitPanelUiState
 import compose.project.home.HabitState
@@ -52,7 +52,7 @@ fun CalendarPanelOverlay(
     onSelect: (Long, HabitStatus) -> Unit,
     onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit,
     panelLiquidState: LiquidState,
-    iconResId: Int
+    iconType: HabitIconType
 ) {
     panelAnchor?.let { anchor ->
         val density = LocalDensity.current
@@ -130,12 +130,12 @@ fun CalendarPanelOverlay(
                             HabitState.COMPLETED -> HabitStatus.COMPLETED
                             HabitState.MISSED -> HabitStatus.MISSED
                             HabitState.UNMARKED -> HabitStatus.UNMARKED
-                            HabitState.DEFAULT -> return@HabitStatePanel
+                            else -> HabitStatus.UNMARKED
                         }
                         onSelect(anchor.day.epochDay, status)
                     },
                     panelLiquidState = panelLiquidState,
-                    iconResId = iconResId
+                    iconType = iconType
                 )
             }
         }
@@ -150,7 +150,7 @@ private fun HabitStatePanel(
     targetWidth: Dp,
     onSelect: (HabitState) -> Unit,
     panelLiquidState: LiquidState,
-    iconResId: Int
+    iconType: HabitIconType
 ) {
     val states = remember(selectedStatus, direction) {
         buildOrderedStates(selectedStatus, direction)
@@ -190,7 +190,7 @@ private fun HabitStatePanel(
                             contentAlignment = Alignment.Center
                         ) {
                             HabitIcon(
-                                selectorRes = iconResId,
+                                iconType = iconType,
                                 habitState = state,
                                 modifier = Modifier.size(35.dp)
                             )
@@ -205,7 +205,7 @@ private fun HabitStatePanel(
                     widthDp = widthDp,
                     targetWidth = targetWidth,
                     onSelect = onSelect,
-                    iconResId = iconResId
+                    iconType = iconType
                 )
             }
         }
@@ -218,7 +218,7 @@ private fun RevealEndByWidth(
     widthDp: Dp,
     targetWidth: Dp,
     onSelect: (HabitState) -> Unit,
-    iconResId: Int
+    iconType: HabitIconType
 ) {
     val density = LocalDensity.current
 
@@ -248,7 +248,7 @@ private fun RevealEndByWidth(
             widthPx = iconPx,
             iconSize = iconSize,
             onSelect = onSelect,
-            iconResId = iconResId
+            iconType = iconType
         )
 
         if (w1 > 0f) {
@@ -258,7 +258,7 @@ private fun RevealEndByWidth(
                 widthPx = w1,
                 iconSize = iconSize,
                 onSelect = onSelect,
-                iconResId = iconResId
+                iconType = iconType
             )
         }
 
@@ -269,7 +269,7 @@ private fun RevealEndByWidth(
                 widthPx = w0,
                 iconSize = iconSize,
                 onSelect = onSelect,
-                iconResId = iconResId
+                iconType = iconType
             )
         }
     }
@@ -282,7 +282,7 @@ private fun IconCellAtWidth(
     widthPx: Float,
     iconSize: Dp,
     onSelect: (HabitState) -> Unit,
-    iconResId: Int
+    iconType: HabitIconType
 ) {
     val density = LocalDensity.current
 
@@ -304,7 +304,7 @@ private fun IconCellAtWidth(
             contentAlignment = Alignment.Center
         ) {
             HabitIcon(
-                selectorRes = iconResId,
+                iconType = iconType,
                 habitState = state,
                 modifier = Modifier.size(35.dp)
             )
@@ -320,7 +320,7 @@ private fun buildOrderedStates(
         HabitStatus.COMPLETED -> HabitState.COMPLETED
         HabitStatus.MISSED -> HabitState.MISSED
         HabitStatus.UNMARKED -> HabitState.UNMARKED
-        null -> HabitState.COMPLETED
+        else -> HabitState.COMPLETED
     }
 
     val others = listOf(
