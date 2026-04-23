@@ -38,6 +38,8 @@ import compose.project.home.HabitPanelUiState
 import compose.project.home.HabitState
 import io.github.fletchmckee.liquid.LiquidState
 import io.github.fletchmckee.liquid.liquid
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private enum class PanelDirection {
@@ -88,8 +90,22 @@ fun CalendarPanelOverlay(
                 }
 
                 isClosing -> {
-                    widthAnim.animateTo(dayCellWidth.value, animationSpec = tween(300))
-                    liquidCloseAnim.animateTo(1f, animationSpec = tween(180))
+                    coroutineScope {
+                        launch {
+                            widthAnim.animateTo(
+                                dayCellWidth.value,
+                                animationSpec = tween(300)
+                            )
+                        }
+
+                        launch {
+                            liquidCloseAnim.animateTo(
+                                1f,
+                                animationSpec = tween(300)
+                            )
+                        }
+                    }
+
                     onHideFinished()
                 }
 
