@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -123,7 +124,8 @@ fun HabitTrackerScreen(
         onAddHabitClicked = { habitViewModel.onAddHabitClicked() },
         onAddHabitDismiss = { habitViewModel.onAddHabitDismiss() },
         onCreateHabit = { habitViewModel.createHabit(it) },
-        onDeleteHabit = { habitViewModel.deleteHabit(it) }
+        onDeleteHabit = { habitViewModel.deleteHabit(it) },
+        onHideFinished = {habitViewModel.onHideFinished()}
     )
 }
 
@@ -133,7 +135,7 @@ fun HabitTrackerScreenContent(
     switcherLiquidState: LiquidState = rememberLiquidState(),
     trashLiquidState: LiquidState = rememberLiquidState(),
     panelLiquidState: LiquidState = rememberLiquidState(),
-    onStatusSelected: (Long, HabitStatus) -> Unit = { _, _ -> },
+    onStatusSelected: (DayUiModel, HabitStatus) -> Unit = { _, _ -> },
     onDayClicked: (DayUiModel) -> Unit = { _ -> },
     onPanelDismiss: () -> Unit = {},
     onModeChanged: (CalendarViewMode) -> Unit = { _ -> },
@@ -142,6 +144,7 @@ fun HabitTrackerScreenContent(
     onAddHabitDismiss: () -> Unit,
     onCreateHabit: (String) -> Unit,
     onDeleteHabit: (Long) -> Unit,
+    onHideFinished: () -> Unit
 ) {
     if (uiState.habits.isEmpty()) {
         EmptyHabitScreen(onAddHabitClicked)
@@ -180,7 +183,8 @@ fun HabitTrackerScreenContent(
                 onDayClicked = onDayClicked,
                 onPanelDismiss = onPanelDismiss,
                 pagerState = pagerState,
-                iconType = iconType
+                iconType = iconType,
+                onHideFinished = onHideFinished
             )
         }
     }
@@ -310,25 +314,28 @@ fun CalendarWithPanel(
     switcherLiquidState: LiquidState,
     trashLiquidState: LiquidState,
     panelLiquidState: LiquidState,
-    onStatusSelected: (Long, HabitStatus) -> Unit,
+    onStatusSelected: (DayUiModel, HabitStatus) -> Unit,
     onDayClicked: (DayUiModel) -> Unit = {},
     onPanelDismiss: () -> Unit,
     pagerState: PagerState,
-    iconType: HabitIconType
+    iconType: HabitIconType,
+    onHideFinished: () -> Unit
 ) {
     var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
     var panelBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+
+    val latestPanelBounds by rememberUpdatedState(panelBounds)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .liquefiable(switcherLiquidState)
-            .pointerInput(panelAnchor, panelBounds) {
+            .pointerInput(panelAnchor) {
                 if (panelAnchor == null) return@pointerInput
 
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    val insidePanel = panelBounds?.contains(down.position) == true
+                    val insidePanel = latestPanelBounds?.contains(down.position) == true
                     if (!insidePanel) {
                         panelAnchor = null
                     }
@@ -369,8 +376,13 @@ fun CalendarWithPanel(
                 onStatusSelected(day, status)
                 onPanelDismiss()
             },
-            onBoundsChanged = { panelBounds = it },
-            iconType = iconType
+            onBoundsChanged = { newBounds ->
+                if (newBounds != panelBounds) {
+                    panelBounds = newBounds
+                }
+            },
+            iconType = iconType,
+            onHideFinished = onHideFinished
         )
     }
 }
@@ -414,7 +426,6 @@ fun CalendarTabFrame(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
             }
-            // Плюсик в конце вкладок
             Surface(
                 modifier = Modifier
                     .clickable { onAddHabitClicked() },
@@ -878,7 +889,8 @@ fun HabitTrackerScreenPreview() {
             onAddHabitClicked = {},
             onAddHabitDismiss = {},
             onCreateHabit = {},
-            onDeleteHabit = {}
+            onDeleteHabit = {},
+            onHideFinished = {}
         )
     }
 }

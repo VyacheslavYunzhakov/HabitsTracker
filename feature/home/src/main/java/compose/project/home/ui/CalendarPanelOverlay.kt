@@ -3,12 +3,9 @@ package compose.project.home.ui
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -34,11 +31,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import compose.project.designsystem.HabitIconType
 import compose.project.data.model.HabitStatus
+import compose.project.home.DayUiModel
 import compose.project.home.HabitIcon
 import compose.project.home.HabitPanelUiState
 import compose.project.home.HabitState
 import io.github.fletchmckee.liquid.LiquidState
 import io.github.fletchmckee.liquid.liquid
+import kotlin.math.roundToInt
 
 private enum class PanelDirection {
     Start,
@@ -49,16 +48,17 @@ private enum class PanelDirection {
 fun CalendarPanelOverlay(
     panelAnchor: PanelAnchor?,
     panelState: HabitPanelUiState,
-    onSelect: (Long, HabitStatus) -> Unit,
+    onSelect: (DayUiModel, HabitStatus) -> Unit,
     onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit,
     panelLiquidState: LiquidState,
-    iconType: HabitIconType
+    iconType: HabitIconType,
+    onHideFinished: () -> Unit
 ) {
     panelAnchor?.let { anchor ->
         val density = LocalDensity.current
         val windowInfo = LocalWindowInfo.current
 
-        val dayCellWidth = 60.dp
+        val dayCellWidth = 57.dp
         val dayCellHeight = 70.dp
         val targetWidth = 136.dp
 
@@ -78,14 +78,21 @@ fun CalendarPanelOverlay(
         val isVisibleContent =
             panelState is HabitPanelUiState.Visible || widthAnim.value > dayCellWidth.value
 
-        LaunchedEffect(panelState) {
-            if (panelState is HabitPanelUiState.Visible) {
-                widthAnim.animateTo(
-                    targetWidth.value,
-                    animationSpec = tween(300)
-                )
-            } else {
-                widthAnim.snapTo(dayCellWidth.value)
+        val isVisible = panelState is HabitPanelUiState.Visible
+        val isClosing = (panelState as? HabitPanelUiState.Visible)?.closingStatus != null
+
+        LaunchedEffect(isVisible, isClosing) {
+            when {
+                isVisible && !isClosing -> {
+                    widthAnim.animateTo(targetWidth.value, animationSpec = tween(300))
+                }
+                isClosing -> {
+                    widthAnim.animateTo(dayCellWidth.value, animationSpec = tween(300))
+                    onHideFinished()
+                }
+                else -> {
+                    widthAnim.snapTo(dayCellWidth.value)
+                }
             }
         }
 
@@ -110,6 +117,11 @@ fun CalendarPanelOverlay(
         )
         val y = yPx.toInt()
 
+        val displayedStatus = when (panelState) {
+            is HabitPanelUiState.Visible -> panelState.closingStatus ?: anchor.day.habitStatus
+            else -> anchor.day.habitStatus
+        }
+
         Box(
             modifier = Modifier
                 .offset { IntOffset(x, y) }
@@ -122,7 +134,7 @@ fun CalendarPanelOverlay(
             if (isVisibleContent) {
                 HabitStatePanel(
                     direction = direction,
-                    selectedStatus = anchor.day.habitStatus,
+                    selectedStatus = displayedStatus,
                     widthDp = widthAnim.value.dp,
                     targetWidth = targetWidth,
                     onSelect = { state ->
@@ -132,7 +144,7 @@ fun CalendarPanelOverlay(
                             HabitState.UNMARKED -> HabitStatus.UNMARKED
                             else -> HabitStatus.UNMARKED
                         }
-                        onSelect(anchor.day.epochDay, status)
+                        onSelect(anchor.day, status)
                     },
                     panelLiquidState = panelLiquidState,
                     iconType = iconType
@@ -152,12 +164,9 @@ private fun HabitStatePanel(
     panelLiquidState: LiquidState,
     iconType: HabitIconType
 ) {
-    val states = remember(selectedStatus, direction) {
-        buildOrderedStates(selectedStatus, direction)
-    }
 
-    val startPadding = 8.dp
-    val endPadding = 8.dp
+    val startPadding = 6.dp
+    val endPadding = 6.dp
 
     Box(
         modifier = Modifier
@@ -174,47 +183,27 @@ private fun HabitStatePanel(
             }
             .padding(top = 18.dp, bottom = 10.dp, start = startPadding, end = endPadding)
     ) {
-        when (direction) {
-            PanelDirection.Start -> {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.Start),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    states.forEach { state ->
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .clickable { onSelect(state) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            HabitIcon(
-                                iconType = iconType,
-                                habitState = state,
-                                modifier = Modifier.size(35.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            PanelDirection.End -> {
-                RevealEndByWidth(
-                    states = states,
-                    widthDp = widthDp,
-                    targetWidth = targetWidth,
-                    onSelect = onSelect,
-                    iconType = iconType
-                )
-            }
-        }
+        RevealByWidth(
+            selectedStatus = selectedStatus,
+            direction = direction,
+            widthDp = widthDp,
+            targetWidth = targetWidth,
+            onSelect = onSelect,
+            iconType = iconType
+        )
     }
 }
 
+private val allStates = listOf(
+    HabitState.COMPLETED,
+    HabitState.MISSED,
+    HabitState.UNMARKED
+)
+
 @Composable
-private fun RevealEndByWidth(
-    states: List<HabitState>,
+private fun RevealByWidth(
+    selectedStatus: HabitStatus?,
+    direction: PanelDirection,
     widthDp: Dp,
     targetWidth: Dp,
     onSelect: (HabitState) -> Unit,
@@ -223,54 +212,129 @@ private fun RevealEndByWidth(
     val density = LocalDensity.current
 
     val iconSize = 40.dp
-    val spacing = 3.dp
+    val spacing = 0.dp
 
     val iconPx = with(density) { iconSize.toPx() }
     val spacingPx = with(density) { spacing.toPx() }
 
-    val progress = ((widthDp.value - 60f) / (targetWidth.value - 60f))
+    val selectedIdx = selectedIndex(selectedStatus)
+
+    val openProgress = ((widthDp.value - 60f) / (targetWidth.value - 60f))
         .coerceIn(0f, 1f)
 
-    val w1 = iconPx * ((progress - 0.33f) / 0.33f).coerceIn(0f, 1f)
-    val w0 = iconPx * ((progress - 0.66f) / 0.34f).coerceIn(0f, 1f)
+    val collapseProgress = 1f - openProgress
+
+    val order = collapseOrder(direction, selectedIdx)
+
+    val widths = FloatArray(3) { iconPx }
+
+    val gap0 = gapFor(widths[0], iconPx, spacingPx)
+    val gap1 = gapFor(widths[1], iconPx, spacingPx)
+
+    fun widthForPhase(start: Float, end: Float): Float {
+        val t = ((collapseProgress - start) / (end - start)).coerceIn(0f, 1f)
+        return iconPx * (1f - t)
+    }
+
+    widths[order[0]] = widthForPhase(0f, 0.5f)
+    widths[order[1]] = widthForPhase(0.5f, 1f)
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
     ) {
         val maxWidthPx = with(density) { maxWidth.toPx() }
-        val x2 = maxWidthPx - iconPx
-        val x1 = x2 - spacingPx - w1
-        val x0 = x1 - spacingPx - w0
 
-        IconCellAtWidth(
-            state = states[2],
-            x = x2,
-            widthPx = iconPx,
-            iconSize = iconSize,
-            onSelect = onSelect,
-            iconType = iconType
-        )
+        when (direction) {
+            PanelDirection.Start -> {
+                val x0 = 0f
+                val x1 = x0 + widths[0] + gap0
+                val x2 = x1 + widths[1] + gap1
 
-        if (w1 > 0f) {
-            IconCellAtWidth(
-                state = states[1],
-                x = x1,
-                widthPx = w1,
-                iconSize = iconSize,
-                onSelect = onSelect,
-                iconType = iconType
-            )
+                IconCellAtWidth(
+                    state = allStates[0],
+                    x = x0,
+                    widthPx = widths[0],
+                    iconSize = iconSize,
+                    onSelect = onSelect,
+                    iconType = iconType
+                )
+                IconCellAtWidth(
+                    state = allStates[1],
+                    x = x1,
+                    widthPx = widths[1],
+                    iconSize = iconSize,
+                    onSelect = onSelect,
+                    iconType = iconType
+                )
+                IconCellAtWidth(
+                    state = allStates[2],
+                    x = x2,
+                    widthPx = widths[2],
+                    iconSize = iconSize,
+                    onSelect = onSelect,
+                    iconType = iconType
+                )
+            }
+
+            PanelDirection.End -> {
+                val x2 = maxWidthPx - widths[2]
+                val x1 = x2 - widths[1] - gap1
+                val x0 = x1 - widths[0] - gap0
+
+                IconCellAtWidth(
+                    state = allStates[0],
+                    x = x0,
+                    widthPx = widths[0],
+                    iconSize = iconSize,
+                    onSelect = onSelect,
+                    iconType = iconType
+                )
+                IconCellAtWidth(
+                    state = allStates[1],
+                    x = x1,
+                    widthPx = widths[1],
+                    iconSize = iconSize,
+                    onSelect = onSelect,
+                    iconType = iconType
+                )
+                IconCellAtWidth(
+                    state = allStates[2],
+                    x = x2,
+                    widthPx = widths[2],
+                    iconSize = iconSize,
+                    onSelect = onSelect,
+                    iconType = iconType
+                )
+            }
+        }
+    }
+}
+
+private fun gapFor(widthPx: Float, iconPx: Float, spacingPx: Float): Float {
+    return spacingPx * (widthPx / iconPx).coerceIn(0f, 1f)
+}
+
+private fun selectedIndex(selectedStatus: HabitStatus?): Int = when (selectedStatus) {
+    HabitStatus.COMPLETED -> 0
+    HabitStatus.MISSED -> 1
+    HabitStatus.UNMARKED -> 2
+    else -> 0
+}
+
+private fun collapseOrder(direction: PanelDirection, selectedIndex: Int): IntArray {
+    return when (direction) {
+        PanelDirection.Start -> when (selectedIndex) {
+            0 -> intArrayOf(1, 2)
+            1 -> intArrayOf(0, 2)
+            2 -> intArrayOf(0, 1)
+            else -> intArrayOf(1, 2)
         }
 
-        if (w0 > 0f) {
-            IconCellAtWidth(
-                state = states[0],
-                x = x0,
-                widthPx = w0,
-                iconSize = iconSize,
-                onSelect = onSelect,
-                iconType = iconType
-            )
+        PanelDirection.End -> when (selectedIndex) {
+            0 -> intArrayOf(2, 1)
+            1 -> intArrayOf(2, 0)
+            2 -> intArrayOf(1, 0)
+            else -> intArrayOf(2, 1)
         }
     }
 }
@@ -288,7 +352,7 @@ private fun IconCellAtWidth(
 
     Box(
         modifier = Modifier
-            .offset { IntOffset(x.toInt(), 0) }
+            .offset { IntOffset(x.roundToInt(), 0) }
             .width(with(density) { widthPx.toDp() })
             .height(iconSize)
             .clipToBounds(),
@@ -309,28 +373,5 @@ private fun IconCellAtWidth(
                 modifier = Modifier.size(35.dp)
             )
         }
-    }
-}
-
-private fun buildOrderedStates(
-    selectedStatus: HabitStatus?,
-    direction: PanelDirection
-): List<HabitState> {
-    val selectedState = when (selectedStatus) {
-        HabitStatus.COMPLETED -> HabitState.COMPLETED
-        HabitStatus.MISSED -> HabitState.MISSED
-        HabitStatus.UNMARKED -> HabitState.UNMARKED
-        else -> HabitState.COMPLETED
-    }
-
-    val others = listOf(
-        HabitState.COMPLETED,
-        HabitState.MISSED,
-        HabitState.UNMARKED
-    ).filter { it != selectedState }
-
-    return when (direction) {
-        PanelDirection.Start -> listOf(selectedState) + others
-        PanelDirection.End -> others + listOf(selectedState)
     }
 }

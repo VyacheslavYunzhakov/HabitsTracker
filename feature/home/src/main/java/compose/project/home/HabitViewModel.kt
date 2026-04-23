@@ -49,7 +49,8 @@ sealed interface HabitPanelUiState {
     data object Hidden : HabitPanelUiState
 
     data class Visible(
-        val day: DayUiModel
+        val day: DayUiModel,
+        val closingStatus: HabitStatus? = null
     ) : HabitPanelUiState
 }
 
@@ -195,8 +196,8 @@ class HabitViewModel @Inject constructor(
         }
     }
 
-    fun toggleHabitStatus(epochDay: Long, habitStatus: HabitStatus) {
-        val date = LocalDate.ofEpochDay(epochDay)
+    fun toggleHabitStatus(day: DayUiModel, habitStatus: HabitStatus) {
+        val date = day.date
         val currentHabitId = _uiState.value.selectedHabitId ?: return
 
         viewModelScope.launch {
@@ -209,14 +210,14 @@ class HabitViewModel @Inject constructor(
                 )
             )
 
-            habitDaysByEpochDay = habitDaysByEpochDay + (epochDay to habitStatus)
+            habitDaysByEpochDay = habitDaysByEpochDay + (day.epochDay to habitStatus)
 
             _uiState.update { state ->
                 state.copy(
                     calendarState = state.calendarState.copy(
-                        months = state.calendarState.months.updateDay(epochDay, habitStatus)
+                        months = state.calendarState.months.updateDay(day.epochDay, habitStatus)
                     ),
-                    panelState = HabitPanelUiState.Hidden
+                    panelState = HabitPanelUiState.Visible(day = day, closingStatus = habitStatus)
                 )
             }
         }
@@ -337,6 +338,14 @@ class HabitViewModel @Inject constructor(
                     }
                 )
             }
+        }
+    }
+
+    fun onHideFinished() {
+        _uiState.update { state ->
+            state.copy(
+                panelState = HabitPanelUiState.Hidden
+            )
         }
     }
 
