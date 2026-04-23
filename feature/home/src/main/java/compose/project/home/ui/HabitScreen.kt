@@ -144,7 +144,11 @@ fun HabitTrackerScreenContent(
     onDeleteHabit: (Long) -> Unit,
     onHideFinished: () -> Unit
 ) {
-    if (uiState.habits.isEmpty()) {
+    if (uiState.isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            androidx.compose.material3.CircularProgressIndicator()
+        }
+    } else if (uiState.habits.isEmpty()) {
         EmptyHabitScreen(onAddHabitClicked)
     } else {
         val pagerState = rememberPagerState(pageCount = { 2 })

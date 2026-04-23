@@ -27,7 +27,8 @@ data class HabitTrackerUiState(
     val calendarState: CalendarUiState = CalendarUiState(),
     val panelState: HabitPanelUiState = HabitPanelUiState.Hidden,
     val showAddHabitSelection: Boolean = false,
-    val availableHabits: List<compose.project.data.local.HabitEntity> = emptyList()
+    val availableHabits: List<compose.project.data.local.HabitEntity> = emptyList(),
+    val isLoading: Boolean = true
 )
 
 @Immutable
@@ -103,7 +104,7 @@ class HabitViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             habitInteractor.getAddedHabits().collect { habits ->
-                _uiState.update { it.copy(habits = habits) }
+                _uiState.update { it.copy(habits = habits, isLoading = false) }
                 if (habits.isNotEmpty() && _uiState.value.selectedHabitId == null) {
                     onHabitSelected(habits.first().id)
                 }
