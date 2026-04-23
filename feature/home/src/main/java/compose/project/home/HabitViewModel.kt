@@ -26,7 +26,8 @@ data class HabitTrackerUiState(
     val switcherState: CalendarSwitcherUiState = CalendarSwitcherUiState(),
     val calendarState: CalendarUiState = CalendarUiState(),
     val panelState: HabitPanelUiState = HabitPanelUiState.Hidden,
-    val showAddHabitSelection: Boolean = false
+    val showAddHabitSelection: Boolean = false,
+    val availableHabits: List<compose.project.data.local.HabitEntity> = emptyList()
 )
 
 @Immutable
@@ -101,11 +102,16 @@ class HabitViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            habitInteractor.getAllHabits().collect { habits ->
+            habitInteractor.getAddedHabits().collect { habits ->
                 _uiState.update { it.copy(habits = habits) }
                 if (habits.isNotEmpty() && _uiState.value.selectedHabitId == null) {
                     onHabitSelected(habits.first().id)
                 }
+            }
+        }
+        viewModelScope.launch {
+            habitInteractor.getAvailableHabits().collect { available ->
+                _uiState.update { it.copy(availableHabits = available) }
             }
         }
     }
@@ -139,13 +145,9 @@ class HabitViewModel @Inject constructor(
         _uiState.update { it.copy(showAddHabitSelection = false) }
     }
 
-    fun createHabit(iconResName: String) {
+    fun addHabit(habitId: Long) {
         viewModelScope.launch {
-            val newHabit = compose.project.data.local.HabitEntity(
-                name = iconResName.substringBefore("_icon_selector").replaceFirstChar { it.uppercase() },
-                iconResName = iconResName
-            )
-            habitInteractor.insertHabit(newHabit)
+            habitInteractor.addHabit(habitId)
             _uiState.update { it.copy(showAddHabitSelection = false) }
         }
     }
@@ -153,7 +155,7 @@ class HabitViewModel @Inject constructor(
     fun deleteHabit(id: Long) {
         viewModelScope.launch {
             val wasSelected = _uiState.value.selectedHabitId == id
-            habitInteractor.deleteHabitById(id)
+            habitInteractor.removeHabit(id)
             
             _uiState.update { state ->
                 val newHabits = state.habits.filter { it.id != id }
@@ -168,7 +170,6 @@ class HabitViewModel @Inject constructor(
                 _uiState.value.selectedHabitId?.let { newId ->
                     selectHabit(newId)
                 } ?: run {
-                    // Если привычек больше нет, очищаем статусы
                     habitDaysByEpochDay = emptyMap()
                     _uiState.update { state ->
                         state.copy(
@@ -187,12 +188,6 @@ class HabitViewModel @Inject constructor(
             state.copy(
                 panelState = HabitPanelUiState.Visible(day = day)
             )
-        }
-    }
-
-    fun onPanelDismiss() {
-        _uiState.update { state ->
-            state.copy(panelState = HabitPanelUiState.Hidden)
         }
     }
 

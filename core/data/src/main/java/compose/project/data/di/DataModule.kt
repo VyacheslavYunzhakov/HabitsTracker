@@ -25,7 +25,8 @@ object DataModule {
             context,
             HabitTrackerDatabase::class.java,
             "habit_tracker.db",
-        ).addMigrations(HabitTrackerDatabase.MIGRATION_1_2)
+        ).addMigrations(HabitTrackerDatabase.MIGRATION_1_2,HabitTrackerDatabase.MIGRATION_2_3,
+            HabitTrackerDatabase.MIGRATION_3_4)
             .build()
     }
 

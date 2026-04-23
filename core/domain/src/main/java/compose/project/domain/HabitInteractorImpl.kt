@@ -7,12 +7,16 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class HabitInteractorImpl @Inject constructor(private val habitRepository: HabitRepository): HabitInteractor {
-    override fun getAllHabits(): Flow<List<HabitEntity>> {
-        return habitRepository.getAllHabits()
+    override fun getAddedHabits(): Flow<List<HabitEntity>> {
+        return habitRepository.getAddedHabits()
     }
 
-    override suspend fun insertHabit(habit: HabitEntity) {
-        habitRepository.insertHabit(habit)
+    override fun getAvailableHabits(): Flow<List<HabitEntity>> {
+        return habitRepository.getAvailableHabits()
+    }
+
+    override suspend fun addHabit(id: Long) {
+        habitRepository.addHabit(id)
     }
 
     override suspend fun getHabitDaysByHabitId(habitId: Long): List<HabitDay> {
@@ -23,7 +27,7 @@ class HabitInteractorImpl @Inject constructor(private val habitRepository: Habit
         habitRepository.updateHabitDay(habitDay)
     }
 
-    override suspend fun deleteHabitById(id: Long) {
-        habitRepository.deleteHabitById(id)
+    override suspend fun removeHabit(id: Long) {
+        habitRepository.removeHabit(id)
     }
 }

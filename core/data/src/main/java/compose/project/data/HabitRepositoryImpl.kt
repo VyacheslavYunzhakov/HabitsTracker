@@ -14,12 +14,16 @@ class HabitRepositoryImpl @Inject constructor(
     private val habitDao: HabitDao
 ) : HabitRepository {
 
-    override fun getAllHabits(): Flow<List<HabitEntity>> {
-        return habitDao.getAllHabits()
+    override fun getAddedHabits(): Flow<List<HabitEntity>> {
+        return habitDao.getAddedHabits()
     }
 
-    override suspend fun insertHabit(habit: HabitEntity) {
-        habitDao.insertHabit(habit)
+    override fun getAvailableHabits(): Flow<List<HabitEntity>> {
+        return habitDao.getAvailableHabits()
+    }
+
+    override suspend fun addHabit(id: Long) {
+        habitDao.updateHabitStatus(id, true)
     }
 
     override suspend fun getHabitDaysByHabitId(habitId: Long): List<HabitDay> {
@@ -30,7 +34,7 @@ class HabitRepositoryImpl @Inject constructor(
         habitDayDao.insert(habitDay.toEntity())
     }
 
-    override suspend fun deleteHabitById(id: Long) {
-        habitDao.deleteHabitById(id)
+    override suspend fun removeHabit(id: Long) {
+        habitDao.removeHabit(id)
     }
 }

@@ -118,12 +118,11 @@ fun HabitTrackerScreen(
         uiState = uiState,
         onStatusSelected = { date, habitStatus -> habitViewModel.toggleHabitStatus(date, habitStatus) },
         onDayClicked = { day -> habitViewModel.onDayClicked(day) },
-        onPanelDismiss = { habitViewModel.onPanelDismiss() },
         onModeChanged = { habitViewModel.onModeChanged(it) },
         onHabitSelected = { habitViewModel.onHabitSelected(it) },
         onAddHabitClicked = { habitViewModel.onAddHabitClicked() },
         onAddHabitDismiss = { habitViewModel.onAddHabitDismiss() },
-        onCreateHabit = { habitViewModel.createHabit(it) },
+        onAddHabit = { habitViewModel.addHabit(it) },
         onDeleteHabit = { habitViewModel.deleteHabit(it) },
         onHideFinished = {habitViewModel.onHideFinished()}
     )
@@ -137,12 +136,11 @@ fun HabitTrackerScreenContent(
     panelLiquidState: LiquidState = rememberLiquidState(),
     onStatusSelected: (DayUiModel, HabitStatus) -> Unit = { _, _ -> },
     onDayClicked: (DayUiModel) -> Unit = { _ -> },
-    onPanelDismiss: () -> Unit = {},
     onModeChanged: (CalendarViewMode) -> Unit = { _ -> },
     onHabitSelected: (Long) -> Unit,
     onAddHabitClicked: () -> Unit,
     onAddHabitDismiss: () -> Unit,
-    onCreateHabit: (String) -> Unit,
+    onAddHabit: (Long) -> Unit,
     onDeleteHabit: (Long) -> Unit,
     onHideFinished: () -> Unit
 ) {
@@ -181,7 +179,6 @@ fun HabitTrackerScreenContent(
                 panelLiquidState = panelLiquidState,
                 onStatusSelected = onStatusSelected,
                 onDayClicked = onDayClicked,
-                onPanelDismiss = onPanelDismiss,
                 pagerState = pagerState,
                 iconType = iconType,
                 onHideFinished = onHideFinished
@@ -191,8 +188,9 @@ fun HabitTrackerScreenContent(
 
     if (uiState.showAddHabitSelection) {
         IconSelectionDialog(
+            availableHabits = uiState.availableHabits,
             onDismiss = onAddHabitDismiss,
-            onIconSelected = onCreateHabit
+            onHabitSelected = onAddHabit
         )
     }
 }
@@ -225,8 +223,9 @@ fun EmptyHabitScreen(onAddHabitClicked: () -> Unit) {
 
 @Composable
 fun IconSelectionDialog(
+    availableHabits: List<compose.project.data.local.HabitEntity>,
     onDismiss: () -> Unit,
-    onIconSelected: (String) -> Unit
+    onHabitSelected: (Long) -> Unit
 ) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -245,26 +244,34 @@ fun IconSelectionDialog(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                val icons = HabitIconType.entries.filter { it != HabitIconType.TRASH }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    icons.forEach { iconType ->
-                        Surface(
-                            modifier = Modifier
-                                .size(60.dp)
-                                .clickable { onIconSelected(iconType.iconName) },
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                HabitIcon(
-                                    iconType = iconType,
-                                    modifier = Modifier.size(40.dp),
-                                    habitState = HabitState.DEFAULT
-                                )
+                if (availableHabits.isEmpty()) {
+                    Text(
+                        text = stringResource(compose.project.home.R.string.no_more_habits),
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        availableHabits.forEach { habit ->
+                            val iconType = HabitIconType.fromName(habit.iconResName)
+                            Surface(
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clickable { onHabitSelected(habit.id) },
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    HabitIcon(
+                                        iconType = iconType,
+                                        modifier = Modifier.size(40.dp),
+                                        habitState = HabitState.DEFAULT
+                                    )
+                                }
                             }
                         }
                     }
@@ -316,7 +323,6 @@ fun CalendarWithPanel(
     panelLiquidState: LiquidState,
     onStatusSelected: (DayUiModel, HabitStatus) -> Unit,
     onDayClicked: (DayUiModel) -> Unit = {},
-    onPanelDismiss: () -> Unit,
     pagerState: PagerState,
     iconType: HabitIconType,
     onHideFinished: () -> Unit
@@ -374,7 +380,6 @@ fun CalendarWithPanel(
             panelLiquidState = panelLiquidState,
             onSelect = { day, status ->
                 onStatusSelected(day, status)
-                onPanelDismiss()
             },
             onBoundsChanged = { newBounds ->
                 if (newBounds != panelBounds) {
@@ -888,7 +893,7 @@ fun HabitTrackerScreenPreview() {
             onHabitSelected = {},
             onAddHabitClicked = {},
             onAddHabitDismiss = {},
-            onCreateHabit = {},
+            onAddHabit = {},
             onDeleteHabit = {},
             onHideFinished = {}
         )

@@ -3,4 +3,5 @@
     <string name="month_switcher_month">Month</string>
     <string name="month_switcher_year">Year</string>
     <string name="Choose_a_habit">Choose a habit</string>
+    <string name="no_more_habits">No more habits available to add</string>
 </resources>
