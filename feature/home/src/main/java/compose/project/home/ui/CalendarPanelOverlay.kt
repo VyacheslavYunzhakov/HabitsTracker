@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
@@ -63,35 +64,38 @@ fun CalendarPanelOverlay(
         val targetWidth = 136.dp
 
         val screenWidthPx = windowInfo.containerSize.width.toFloat()
-
         val cellWidthPx = with(density) { dayCellWidth.toPx() }
         val targetWidthPx = with(density) { targetWidth.toPx() }
         val sidePaddingPx = with(density) { 6.dp.toPx() }
 
         val widthAnim = remember { Animatable(dayCellWidth.value) }
+        val liquidCloseAnim = remember { Animatable(0f) }
 
         val direction = remember(anchor.x, screenWidthPx) {
             val openToRightFits = anchor.x + targetWidthPx + sidePaddingPx <= screenWidthPx
             if (openToRightFits) PanelDirection.Start else PanelDirection.End
         }
 
-        val isVisibleContent =
-            panelState is HabitPanelUiState.Visible || widthAnim.value > dayCellWidth.value
-
         val isVisible = panelState is HabitPanelUiState.Visible
         val isClosing = (panelState as? HabitPanelUiState.Visible)?.closingStatus != null
+        val isVisibleContent = isVisible || widthAnim.value > dayCellWidth.value
 
         LaunchedEffect(isVisible, isClosing) {
             when {
                 isVisible && !isClosing -> {
+                    liquidCloseAnim.snapTo(0f)
                     widthAnim.animateTo(targetWidth.value, animationSpec = tween(300))
                 }
+
                 isClosing -> {
                     widthAnim.animateTo(dayCellWidth.value, animationSpec = tween(300))
+                    liquidCloseAnim.animateTo(1f, animationSpec = tween(180))
                     onHideFinished()
                 }
+
                 else -> {
                     widthAnim.snapTo(dayCellWidth.value)
+                    liquidCloseAnim.snapTo(0f)
                 }
             }
         }
@@ -102,7 +106,6 @@ fun CalendarPanelOverlay(
             PanelDirection.Start -> {
                 anchor.x - cellWidthPx / 2f - with(density) { 13.dp.toPx() }
             }
-
             PanelDirection.End -> {
                 anchor.x + cellWidthPx / 2f - currentWidthPx - with(density) { 18.dp.toPx() }
             }
@@ -111,10 +114,7 @@ fun CalendarPanelOverlay(
         val yPx =
             anchor.y - with(density) { 6.dp.toPx() + dayCellHeight.toPx() } + with(density) { 10.dp.toPx() }
 
-        val x = xPx.toInt().coerceIn(
-            0,
-            (screenWidthPx - currentWidthPx).toInt()
-        )
+        val x = xPx.toInt().coerceIn(0, (screenWidthPx - currentWidthPx).toInt())
         val y = yPx.toInt()
 
         val displayedStatus = when (panelState) {
@@ -137,6 +137,7 @@ fun CalendarPanelOverlay(
                     selectedStatus = displayedStatus,
                     widthDp = widthAnim.value.dp,
                     targetWidth = targetWidth,
+                    closeProgress = liquidCloseAnim.value,
                     onSelect = { state ->
                         val status = when (state) {
                             HabitState.COMPLETED -> HabitStatus.COMPLETED
@@ -160,26 +161,34 @@ private fun HabitStatePanel(
     selectedStatus: HabitStatus?,
     widthDp: Dp,
     targetWidth: Dp,
+    closeProgress: Float,
     onSelect: (HabitState) -> Unit,
     panelLiquidState: LiquidState,
     iconType: HabitIconType
 ) {
-
     val startPadding = 6.dp
     val endPadding = 6.dp
+
+    val frost = androidx.compose.ui.unit.lerp(10.dp, 0.dp, closeProgress)
+    val refraction = androidx.compose.ui.util.lerp(0.5f, 0f, closeProgress)
+    val curve = androidx.compose.ui.util.lerp(0.5f, 0f, closeProgress)
+    val edge = androidx.compose.ui.util.lerp(0.1f, 0f, closeProgress)
+    val tintAlpha = androidx.compose.ui.util.lerp(0.2f, 0f, closeProgress)
+    val saturation = androidx.compose.ui.util.lerp(1.5f, 1f, closeProgress)
+    val dispersion = androidx.compose.ui.util.lerp(0.25f, 0f, closeProgress)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .liquid(panelLiquidState) {
                 shape = RoundedCornerShape(100)
-                frost = 10.dp
-                refraction = 0.5f
-                curve = 0.5f
-                edge = 0.1f
-                tint = Color.White.copy(alpha = 0.2f)
-                saturation = 1.5f
-                dispersion = 0.25f
+                this.frost = frost
+                this.refraction = refraction
+                this.curve = curve
+                this.edge = edge
+                tint = Color.White.copy(alpha = tintAlpha)
+                this.saturation = saturation
+                this.dispersion = dispersion
             }
             .padding(top = 18.dp, bottom = 10.dp, start = startPadding, end = endPadding)
     ) {
@@ -188,6 +197,7 @@ private fun HabitStatePanel(
             direction = direction,
             widthDp = widthDp,
             targetWidth = targetWidth,
+            closeProgress = closeProgress,
             onSelect = onSelect,
             iconType = iconType
         )
@@ -206,6 +216,7 @@ private fun RevealByWidth(
     direction: PanelDirection,
     widthDp: Dp,
     targetWidth: Dp,
+    closeProgress: Float,
     onSelect: (HabitState) -> Unit,
     iconType: HabitIconType
 ) {
@@ -213,7 +224,7 @@ private fun RevealByWidth(
 
     val iconSize = 40.dp
     val spacing = 0.dp
-
+    val alpha = androidx.compose.ui.util.lerp(1f, 0f, closeProgress)
     val iconPx = with(density) { iconSize.toPx() }
     val spacingPx = with(density) { spacing.toPx() }
 
@@ -255,6 +266,7 @@ private fun RevealByWidth(
                     x = x0,
                     widthPx = widths[0],
                     iconSize = iconSize,
+                    alpha = alpha,
                     onSelect = onSelect,
                     iconType = iconType
                 )
@@ -263,6 +275,7 @@ private fun RevealByWidth(
                     x = x1,
                     widthPx = widths[1],
                     iconSize = iconSize,
+                    alpha = alpha,
                     onSelect = onSelect,
                     iconType = iconType
                 )
@@ -271,6 +284,7 @@ private fun RevealByWidth(
                     x = x2,
                     widthPx = widths[2],
                     iconSize = iconSize,
+                    alpha = alpha,
                     onSelect = onSelect,
                     iconType = iconType
                 )
@@ -286,6 +300,7 @@ private fun RevealByWidth(
                     x = x0,
                     widthPx = widths[0],
                     iconSize = iconSize,
+                    alpha = alpha,
                     onSelect = onSelect,
                     iconType = iconType
                 )
@@ -294,6 +309,7 @@ private fun RevealByWidth(
                     x = x1,
                     widthPx = widths[1],
                     iconSize = iconSize,
+                    alpha = alpha,
                     onSelect = onSelect,
                     iconType = iconType
                 )
@@ -302,6 +318,7 @@ private fun RevealByWidth(
                     x = x2,
                     widthPx = widths[2],
                     iconSize = iconSize,
+                    alpha = alpha,
                     onSelect = onSelect,
                     iconType = iconType
                 )
@@ -345,6 +362,7 @@ private fun IconCellAtWidth(
     x: Float,
     widthPx: Float,
     iconSize: Dp,
+    alpha: Float,
     onSelect: (HabitState) -> Unit,
     iconType: HabitIconType
 ) {
@@ -360,9 +378,10 @@ private fun IconCellAtWidth(
     ) {
         Box(
             modifier = Modifier
+                .alpha(alpha)
                 .size(iconSize)
                 .clip(CircleShape)
-                .clickable(enabled = widthPx > 10f) {
+                .clickable(enabled = widthPx > 10f && alpha > 0.2f) {
                     onSelect(state)
                 },
             contentAlignment = Alignment.Center
