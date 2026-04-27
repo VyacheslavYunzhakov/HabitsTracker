@@ -98,8 +98,8 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
-import java.util.Locale
 import kotlin.math.roundToInt
+import androidx.compose.ui.platform.LocalLocale
 
 
 object CalendarDefaults {
@@ -228,7 +228,7 @@ fun EmptyHabitScreen(onAddHabitClicked: () -> Unit) {
 
 @Composable
 fun IconSelectionDialog(
-    availableHabits: List<compose.project.data.local.HabitEntity>,
+    availableHabits: List<HabitEntity>,
     onDismiss: () -> Unit,
     onHabitSelected: (Long) -> Unit
 ) {
@@ -406,7 +406,7 @@ fun CalendarTabFrame(
     trashLiquidState: LiquidState,
     pagerState: PagerState,
     onModeChanged: (CalendarViewMode) -> Unit,
-    habits: List<compose.project.data.local.HabitEntity>,
+    habits: List<HabitEntity>,
     onAddHabitClicked: () -> Unit,
     onDeleteHabit: (Long) -> Unit,
     content: @Composable () -> Unit,
@@ -641,8 +641,8 @@ fun MonthBlock(
     iconType: HabitIconType
 ) {
 
-    val monthYearFormatter = DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault())
-    val dayOfWeekFormatter = DateTimeFormatter.ofPattern("E", Locale.getDefault())
+    val monthYearFormatter = DateTimeFormatter.ofPattern("LLLL yyyy", LocalLocale.current.platformLocale)
+    val dayOfWeekFormatter = DateTimeFormatter.ofPattern("E", LocalLocale.current.platformLocale)
 
     val today = remember { LocalDate.now() }
 
@@ -689,7 +689,7 @@ fun MonthBlock(
             ) {
                 for (i in 0..6) {
                     val dayOfWeek = (i + 1) % 7
-                    val dayName = dayOfWeekFormatter.withLocale(Locale.getDefault())
+                    val dayName = dayOfWeekFormatter.withLocale(LocalLocale.current.platformLocale)
                         .format(DayOfWeek.of(if (dayOfWeek == 0) 7 else dayOfWeek))
 
                     Text(
