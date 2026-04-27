@@ -12,10 +12,12 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import androidx.compose.runtime.Immutable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.YearMonth
 
@@ -91,28 +93,39 @@ class HabitViewModel @Inject constructor(
 
     private val initialSelectedDate = LocalDate.now()
 
-    private val _uiState = MutableStateFlow(
-        HabitTrackerUiState(
-            calendarState = CalendarUiState(
-                selectedDate = initialSelectedDate,
-                months = buildMonths(selectedDate = initialSelectedDate)
-            )
-        )
-    )
+    private val _uiState = MutableStateFlow(HabitTrackerUiState())
     val uiState: StateFlow<HabitTrackerUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            habitInteractor.getAddedHabits().collect { habits ->
-                _uiState.update { it.copy(habits = habits, isLoading = false) }
-                if (habits.isNotEmpty() && _uiState.value.selectedHabitId == null) {
-                    onHabitSelected(habits.first().id)
+            val initialMonths = withContext(Dispatchers.Default) {
+                buildMonths(selectedDate = initialSelectedDate)
+            }
+            _uiState.update { 
+                it.copy(
+                    calendarState = CalendarUiState(
+                        selectedDate = initialSelectedDate,
+                        months = initialMonths
+                    )
+                )
+            }
+
+            launch {
+                habitInteractor.getAddedHabits().collect { habits ->
+                    if (habits.isEmpty()) {
+                        _uiState.update { it.copy(habits = habits, isLoading = false) }
+                    } else {
+                        _uiState.update { it.copy(habits = habits) }
+                        if (_uiState.value.selectedHabitId == null) {
+                            onHabitSelected(habits.first().id)
+                        }
+                    }
                 }
             }
-        }
-        viewModelScope.launch {
-            habitInteractor.getAvailableHabits().collect { available ->
-                _uiState.update { it.copy(availableHabits = available) }
+            launch {
+                habitInteractor.getAvailableHabits().collect { available ->
+                    _uiState.update { it.copy(availableHabits = available) }
+                }
             }
         }
     }
@@ -125,14 +138,18 @@ class HabitViewModel @Inject constructor(
     private fun selectHabit(id: Long) {
         viewModelScope.launch {
             val days = habitInteractor.getHabitDaysByHabitId(id)
-            habitDaysByEpochDay = days.associate { it.date.toEpochDay() to it.status }
+            val updatedMonths = withContext(Dispatchers.Default) {
+                habitDaysByEpochDay = days.associate { it.date.toEpochDay() to it.status }
+                _uiState.value.calendarState.months.applyStatuses(habitDaysByEpochDay)
+            }
 
             _uiState.update { state ->
                 state.copy(
                     selectedHabitId = id,
                     calendarState = state.calendarState.copy(
-                        months = buildMonths(state.calendarState.selectedDate).applyStatuses(habitDaysByEpochDay)
-                    )
+                        months = updatedMonths
+                    ),
+                    isLoading = false
                 )
             }
         }
@@ -171,11 +188,14 @@ class HabitViewModel @Inject constructor(
                 _uiState.value.selectedHabitId?.let { newId ->
                     selectHabit(newId)
                 } ?: run {
-                    habitDaysByEpochDay = emptyMap()
+                    val clearedMonths = withContext(Dispatchers.Default) {
+                        habitDaysByEpochDay = emptyMap()
+                        buildMonths(_uiState.value.calendarState.selectedDate).applyStatuses(habitDaysByEpochDay)
+                    }
                     _uiState.update { state ->
                         state.copy(
                             calendarState = state.calendarState.copy(
-                                months = buildMonths(state.calendarState.selectedDate).applyStatuses(habitDaysByEpochDay)
+                                months = clearedMonths
                             )
                         )
                     }
@@ -208,10 +228,14 @@ class HabitViewModel @Inject constructor(
 
             habitDaysByEpochDay = habitDaysByEpochDay + (day.epochDay to habitStatus)
 
+            val updatedMonths = withContext(Dispatchers.Default) {
+                _uiState.value.calendarState.months.updateDay(day.epochDay, habitStatus)
+            }
+
             _uiState.update { state ->
                 state.copy(
                     calendarState = state.calendarState.copy(
-                        months = state.calendarState.months.updateDay(day.epochDay, habitStatus)
+                        months = updatedMonths
                     ),
                     panelState = HabitPanelUiState.Visible(day = day, closingStatus = habitStatus)
                 )

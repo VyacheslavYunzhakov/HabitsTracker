@@ -6,7 +6,9 @@ import compose.project.data.local.HabitEntity
 import compose.project.data.local.toModel
 import compose.project.data.local.toEntity
 import compose.project.data.model.HabitDay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class HabitRepositoryImpl @Inject constructor(
@@ -26,12 +28,13 @@ class HabitRepositoryImpl @Inject constructor(
         habitDao.updateHabitStatus(id, true)
     }
 
-    override suspend fun getHabitDaysByHabitId(habitId: Long): List<HabitDay> {
-        return habitDayDao.getByHabitId(habitId).map { it.toModel() }
+    override suspend fun getHabitDaysByHabitId(habitId: Long): List<HabitDay> = withContext(Dispatchers.Default) {
+        habitDayDao.getByHabitId(habitId).map { it.toModel() }
     }
 
-    override suspend fun updateHabitDay(habitDay: HabitDay) {
-        habitDayDao.insert(habitDay.toEntity())
+    override suspend fun updateHabitDay(habitDay: HabitDay) = withContext(Dispatchers.Default) {
+        val entity = habitDay.toEntity()
+        habitDayDao.insert(entity)
     }
 
     override suspend fun removeHabit(id: Long) {
