@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import compose.project.data.local.HabitEntity
 import compose.project.data.model.HabitStatus
 import compose.project.designsystem.HabitIconType
 import compose.project.designsystem.theme.HabitsTrackerTheme
@@ -919,6 +920,12 @@ fun previewHabitTrackerUiState(): HabitTrackerUiState {
         .firstNotNullOf { it }
 
     return HabitTrackerUiState(
+        isLoading = false,
+        habits = listOf(
+            HabitEntity(id = 1, name = "Drink", iconResName = "drink_icon_selector"),
+            HabitEntity(id = 2, name = "Run", iconResName = "run_icon_selector")
+        ),
+        selectedHabitId = 1,
         switcherState = CalendarSwitcherUiState(
             selectedMode = CalendarViewMode.MONTH
         ),
@@ -928,7 +935,9 @@ fun previewHabitTrackerUiState(): HabitTrackerUiState {
         ),
         panelState = HabitPanelUiState.Visible(
             day = selectedDay
-        )
+        ),
+        availableHabits = emptyList(),
+        showAddHabitSelection = false
     )
 }
 
