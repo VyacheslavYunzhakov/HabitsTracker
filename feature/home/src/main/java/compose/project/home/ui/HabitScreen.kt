@@ -159,6 +159,8 @@ fun HabitTrackerScreenContent(
             onModeChanged(pagerState.settledPage.mode())
         }
 
+        val selectedHabitId = uiState.selectedHabitId
+        val habits = uiState.habits
         CalendarTabFrame(
             switcherLiquidState = switcherLiquidState,
             trashLiquidState = trashLiquidState,
@@ -169,16 +171,22 @@ fun HabitTrackerScreenContent(
                 }
             },
             onHabitSelected = onHabitSelected,
-            selectedHabitId = uiState.selectedHabitId,
-            habits = uiState.habits,
+            selectedHabitId = selectedHabitId,
+            habits = habits,
             onAddHabitClicked = onAddHabitClicked,
             onDeleteHabit = onDeleteHabit
         ) {
-            val selectedHabit = uiState.habits.find { it.id == uiState.selectedHabitId }
-            val iconType = HabitIconType.fromName(selectedHabit?.iconResName ?: "drink_icon_selector")
+            val selectedHabit = remember(uiState.habits, uiState.selectedHabitId) {
+                uiState.habits.find { it.id == uiState.selectedHabitId }
+            }
+
+            val iconType = remember(selectedHabit?.iconResName) {
+                HabitIconType.fromName(selectedHabit?.iconResName ?: "drink_icon_selector")
+            }
 
             CalendarWithPanel(
-                uiState = uiState,
+                calendarState = uiState.calendarState,
+                panelState = uiState.panelState,
                 switcherLiquidState = switcherLiquidState,
                 trashLiquidState = trashLiquidState,
                 panelLiquidState = panelLiquidState,
@@ -322,7 +330,8 @@ fun TrashCanIcon(
 
 @Composable
 fun CalendarWithPanel(
-    uiState: HabitTrackerUiState,
+    calendarState: CalendarUiState,
+    panelState: HabitPanelUiState,
     switcherLiquidState: LiquidState,
     trashLiquidState: LiquidState,
     panelLiquidState: LiquidState,
@@ -363,7 +372,7 @@ fun CalendarWithPanel(
             when (page.mode()) {
                 CalendarViewMode.MONTH -> {
                     VerticalCalendarList(
-                        calendarState = uiState.calendarState,
+                        calendarState = calendarState,
                         panelLiquidState = panelLiquidState,
                         iconType = iconType,
                         onDayClick = { day, x, y ->
@@ -374,14 +383,14 @@ fun CalendarWithPanel(
                 }
 
                 CalendarViewMode.YEAR -> {
-                    YearCalendar(uiState.calendarState)
+                    YearCalendar(calendarState)
                 }
             }
         }
 
         CalendarPanelOverlay(
             panelAnchor = panelAnchor,
-            panelState = uiState.panelState,
+            panelState = panelState,
             panelLiquidState = panelLiquidState,
             onSelect = { day, status ->
                 onStatusSelected(day, status)
@@ -392,7 +401,10 @@ fun CalendarWithPanel(
                 }
             },
             iconType = iconType,
-            onHideFinished = onHideFinished
+            onHideFinished = {
+                panelAnchor = null
+                onHideFinished()
+            }
         )
     }
 }
@@ -746,7 +758,7 @@ fun MonthBlock(
                                     )
                                 } else {
                                     DayCell(
-                                        dayUiModel,
+                                        dayUiModel = dayUiModel,
                                         iconType = iconType
                                     )
                                 }
@@ -894,7 +906,7 @@ private fun MonthYearButton(
 fun HabitTrackerScreenPreview() {
     HabitsTrackerTheme {
         HabitTrackerScreenContent(
-            previewHabitTrackerUiState(),
+            uiState = previewHabitTrackerUiState(),
             onHabitSelected = {},
             onAddHabitClicked = {},
             onAddHabitDismiss = {},
