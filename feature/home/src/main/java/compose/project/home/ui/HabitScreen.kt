@@ -53,7 +53,6 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -658,16 +657,13 @@ fun MonthBlock(
 
     val today = remember { LocalDate.now() }
 
-    val monthBlockCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
-    val dayCellCoords = remember(monthUiModel.yearMonth) { mutableMapOf<Long, LayoutCoordinates>() }
+    var gridBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val density = LocalDensity.current
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .onGloballyPositioned { coords ->
-                monthBlockCoords[0] = coords
-            }
             .background(
                 color = MaterialTheme.colorScheme.tertiary,
                 shape = RoundedCornerShape(28.dp)
@@ -715,55 +711,66 @@ fun MonthBlock(
                 }
             }
 
-            monthUiModel.weeks.forEach { week ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coords ->
+                        gridBounds = coords.boundsInWindow()
+                    }
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    week.days.forEach { dayUiModel ->
-                        val isFuture = dayUiModel?.date?.isAfter(today) ?: true
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(60.dp)
-                                .onGloballyPositioned { coords ->
-                                    dayUiModel?.epochDay?.let { dayCellCoords[it] = coords }
-                                }
-                                .clickable(
-                                    indication = null,
-                                    interactionSource = remember { MutableInteractionSource() }
-                                ) {
-                                    if (isFuture) return@clickable
-
-                                    val coords =
-                                        dayCellCoords[dayUiModel.epochDay] ?: return@clickable
-                                    val anchor = coords.boundsInWindow()
-
-                                    onDayClick(
-                                        dayUiModel,
-                                        anchor.center.x,
-                                        anchor.top
-                                    )
-                                },
-                            contentAlignment = Alignment.Center
+                    monthUiModel.weeks.forEachIndexed { weekIndex, week ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            if (dayUiModel != null) {
-                                if (isFuture) {
-                                    Text(
-                                        text = dayUiModel.date.dayOfMonth.toString(),
-                                        fontSize = 18.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                } else {
-                                    DayCell(
-                                        dayUiModel = dayUiModel,
-                                        iconType = iconType
-                                    )
+                            week.days.forEachIndexed { dayIndex, dayUiModel ->
+                                val isFuture = dayUiModel?.date?.isAfter(today) ?: true
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(60.dp)
+                                        .clickable(
+                                            indication = null,
+                                            interactionSource = remember { MutableInteractionSource() }
+                                        ) {
+                                            if (isFuture) return@clickable
+
+                                            gridBounds?.let {
+                                                val cellWidth = it.width / 7f
+                                                val cellHeight = with(density) { 60.dp.toPx() }
+
+                                                val x = it.left + dayIndex * cellWidth + cellWidth / 2f
+                                                val y = it.top + weekIndex * cellHeight
+
+                                                onDayClick(dayUiModel, x, y)
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (dayUiModel != null) {
+                                        if (isFuture) {
+                                            Text(
+                                                text = dayUiModel.date.dayOfMonth.toString(),
+                                                fontSize = 18.sp,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        } else {
+                                            DayCell(
+                                                dayUiModel = dayUiModel,
+                                                iconType = iconType
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(0.dp))
                     }
                 }
             }
