@@ -652,14 +652,31 @@ fun MonthBlock(
     iconType: HabitIconType
 ) {
 
-    val monthYearFormatter = DateTimeFormatter.ofPattern("LLLL yyyy", LocalLocale.current.platformLocale)
-    val dayOfWeekFormatter = DateTimeFormatter.ofPattern("E", LocalLocale.current.platformLocale)
+    val platformLocale = LocalLocale.current.platformLocale
+    val dayOfWeekFormatter = remember(platformLocale) {
+        DateTimeFormatter.ofPattern("E", platformLocale)
+    }
+    val monthYearFormatter = remember(platformLocale) {
+        DateTimeFormatter.ofPattern("LLLL yyyy", platformLocale)
+    }
 
     val today = remember { LocalDate.now() }
 
     var gridBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     val density = LocalDensity.current
 
+    val daysOfWeek = remember(platformLocale) {
+        (0..6).map { i ->
+            val dayOfWeek = (i + 1) % 7
+            val day = DayOfWeek.of(if (dayOfWeek == 0) 7 else dayOfWeek)
+
+            dayOfWeekFormatter
+                .withLocale(platformLocale)
+                .format(day)
+                .take(3)
+                .replaceFirstChar { it.uppercase() }
+        }
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -695,11 +712,7 @@ fun MonthBlock(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                for (i in 0..6) {
-                    val dayOfWeek = (i + 1) % 7
-                    val dayName = dayOfWeekFormatter.withLocale(LocalLocale.current.platformLocale)
-                        .format(DayOfWeek.of(if (dayOfWeek == 0) 7 else dayOfWeek))
-
+                daysOfWeek.forEach { dayName ->
                     Text(
                         text = dayName.take(3).replaceFirstChar { it.uppercase() },
                         fontSize = CalendarDefaults.DaysOfWeekTextSize,
