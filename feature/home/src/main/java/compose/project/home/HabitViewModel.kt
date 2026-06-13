@@ -323,7 +323,7 @@ class HabitViewModel @Inject constructor(
                     week.copy(
                         days = week.days.map { day ->
                             day?.let {
-                                val newStatus = statuses[it.epochDay] ?: it.habitStatus
+                                val newStatus = statuses[it.epochDay] ?: HabitStatus.UNMARKED
                                 if (newStatus == it.habitStatus) it else it.copy(habitStatus = newStatus)
                             }
                         }
