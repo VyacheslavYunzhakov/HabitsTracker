@@ -2,6 +2,7 @@ package compose.project.home.ui
 
 import android.graphics.Paint
 import android.graphics.Rect
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -57,8 +59,10 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
@@ -69,6 +73,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
@@ -730,7 +735,8 @@ fun MonthBlock(
 
     val today = remember { LocalDate.now() }
 
-    var gridBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var monthPosition by remember { mutableStateOf<Offset?>(null) }
+    var gridSize by remember { mutableStateOf<IntSize?>(null)}
     val density = LocalDensity.current
 
     val daysOfWeek = remember(platformLocale) {
@@ -797,7 +803,8 @@ fun MonthBlock(
                 modifier = Modifier
                     .fillMaxWidth()
                     .onGloballyPositioned { coords ->
-                        gridBounds = coords.boundsInWindow()
+                        monthPosition = coords.positionInWindow()
+                        gridSize = coords.size
                     }
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -818,14 +825,15 @@ fun MonthBlock(
                                             interactionSource = remember { MutableInteractionSource() }
                                         ) {
                                             if (isFuture) return@clickable
-
-                                            gridBounds?.let {
-                                                val cellWidth = it.width / 7f
+                                            val gridWidth = gridSize?.width
+                                            val tempX = monthPosition?.x
+                                            val tempY = monthPosition?.y
+                                            if (tempX!= null && tempY != null && gridWidth != null) {
                                                 val cellHeight = with(density) { 60.dp.toPx() }
+                                                val cellWidth = gridWidth/7f
 
-                                                val x = it.left + dayIndex * cellWidth + cellWidth / 2f
-                                                val y = it.top + weekIndex * cellHeight
-
+                                                val x = tempX + dayIndex * cellWidth + cellWidth / 2f
+                                                val y = tempY + weekIndex * cellHeight + cellHeight / 2f
                                                 onDayClick(dayUiModel, x, y)
                                             }
                                         },

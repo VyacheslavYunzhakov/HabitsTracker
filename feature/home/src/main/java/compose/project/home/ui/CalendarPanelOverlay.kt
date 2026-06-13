@@ -127,8 +127,7 @@ fun CalendarPanelOverlay(
             }
         }
 
-        val yPx =
-            anchor.y - with(density) { 6.dp.toPx() + dayCellHeight.toPx() } + with(density) { 10.dp.toPx() }
+        val yPx = anchor.y - with(density) { dayCellHeight.toPx()/2f + 18.dp.toPx()}
 
         val x = xPx.toInt().coerceIn(0, (screenWidthPx - currentWidthPx).toInt())
         val y = yPx.toInt()
