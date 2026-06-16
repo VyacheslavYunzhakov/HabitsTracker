@@ -2,7 +2,6 @@ package compose.project.home.ui
 
 import android.graphics.Paint
 import android.graphics.Rect
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -59,8 +58,6 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInParent
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
@@ -78,7 +75,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import compose.project.data.local.HabitEntity
 import compose.project.data.model.HabitStatus
@@ -103,6 +99,7 @@ import io.github.fletchmckee.liquid.liquefiable
 import io.github.fletchmckee.liquid.liquid
 import io.github.fletchmckee.liquid.rememberLiquidState
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -120,7 +117,7 @@ object CalendarDefaults {
 
 @Composable
 fun HabitTrackerScreen(
-    habitViewModel: HabitViewModel = hiltViewModel()
+    habitViewModel: HabitViewModel = koinViewModel()
 ) {
     val uiState by habitViewModel.uiState.collectAsStateWithLifecycle()
 

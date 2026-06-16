@@ -9,9 +9,7 @@ import androidx.compose.material3.Surface
 import androidx.navigation.compose.rememberNavController
 import compose.project.designsystem.theme.HabitsTrackerTheme
 import compose.project.habitstracker.navigation.AppNavHost
-import dagger.hilt.android.AndroidEntryPoint
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

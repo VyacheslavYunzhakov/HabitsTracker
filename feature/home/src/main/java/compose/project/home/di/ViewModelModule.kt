@@ -1,0 +1,14 @@
+package compose.project.home.di
+
+import compose.project.home.HabitViewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.dsl.module
+
+val viewModelModule = module {
+
+    viewModel {
+        HabitViewModel(
+            habitInteractor = get()
+        )
+    }
+}

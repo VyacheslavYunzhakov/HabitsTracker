@@ -1,7 +1,25 @@
 package compose.project.habitstracker
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
+import compose.project.data.di.dataModule
+import compose.project.domain.di.domainModule
+import compose.project.home.di.viewModelModule
+import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.startKoin
 
-@HiltAndroidApp
-class App : Application()
+class HabitApplication : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+
+        startKoin {
+            androidContext(this@HabitApplication)
+
+            modules(
+                dataModule,
+                domainModule,
+                viewModelModule
+            )
+        }
+    }
+}

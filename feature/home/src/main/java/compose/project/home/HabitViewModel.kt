@@ -2,8 +2,6 @@ package compose.project.home
 
 import androidx.lifecycle.ViewModel
 import compose.project.domain.HabitInteractor
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 
 import androidx.lifecycle.viewModelScope
 import compose.project.data.model.HabitDay
@@ -80,8 +78,7 @@ data class DayUiModel(
     val isClickable: Boolean = true
 )
 
-@HiltViewModel
-class HabitViewModel @Inject constructor(
+class HabitViewModel (
     private val habitInteractor: HabitInteractor
 ) : ViewModel() {
 

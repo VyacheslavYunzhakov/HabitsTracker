@@ -7,9 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
-class HabitInteractorImpl @Inject constructor(private val habitRepository: HabitRepository): HabitInteractor {
+class HabitInteractorImpl (private val habitRepository: HabitRepository): HabitInteractor {
     override fun getAddedHabits(): Flow<List<HabitEntity>> {
         return habitRepository.getAddedHabits().flowOn(Dispatchers.Default)
     }

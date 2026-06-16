@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.hilt)
     id("com.google.devtools.ksp")
 }
 
@@ -38,9 +37,8 @@ dependencies {
     api(project(":core:data"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
-    implementation(libs.hilt.android)
+    implementation(libs.koin.compose)
     implementation(libs.material)
-    ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)

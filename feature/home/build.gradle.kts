@@ -2,8 +2,6 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.hilt)
-    id("com.google.devtools.ksp")
 }
 
 android {
@@ -41,19 +39,17 @@ android {
 
 
 dependencies {
-    implementation(project(":core:domain"))
+    api(project(":core:domain"))
     implementation(project(":core:designsystem"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
-    implementation(libs.hilt.android)
     implementation(libs.material)
     implementation(libs.androidx.navigation.runtime.ktx)
+    implementation(libs.koin.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.hilt.navigation.compose)
-    ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)

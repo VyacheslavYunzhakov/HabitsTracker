@@ -1,42 +1,42 @@
 package compose.project.data.di
 
-import android.content.Context
 import androidx.room.Room
 import compose.project.data.HabitRepository
 import compose.project.data.HabitRepositoryImpl
 import compose.project.data.local.HabitDao
 import compose.project.data.local.HabitDayDao
 import compose.project.data.local.HabitTrackerDatabase
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
-import javax.inject.Singleton
+import org.koin.android.ext.koin.androidContext
+import org.koin.dsl.module
 
-@Module
-@InstallIn(SingletonComponent::class)
-object DataModule {
+val dataModule = module {
 
-    @Provides
-    @Singleton
-    fun provideHabitTrackerDatabase(@ApplicationContext context: Context): HabitTrackerDatabase {
-        return Room.databaseBuilder(
-            context,
+    single {
+        Room.databaseBuilder(
+            androidContext(),
             HabitTrackerDatabase::class.java,
-            "habit_tracker.db",
-        ).addMigrations(HabitTrackerDatabase.MIGRATION_1_2,HabitTrackerDatabase.MIGRATION_2_3,
-            HabitTrackerDatabase.MIGRATION_3_4)
+            "habit_tracker.db"
+        )
+            .addMigrations(
+                HabitTrackerDatabase.MIGRATION_1_2,
+                HabitTrackerDatabase.MIGRATION_2_3,
+                HabitTrackerDatabase.MIGRATION_3_4
+            )
             .build()
     }
 
-    @Provides
-    fun provideHabitDayDao(database: HabitTrackerDatabase): HabitDayDao = database.habitDayDao()
+    single<HabitDayDao> {
+        get<HabitTrackerDatabase>().habitDayDao()
+    }
 
-    @Provides
-    fun provideHabitDao(database: HabitTrackerDatabase): HabitDao = database.habitDao()
+    single<HabitDao> {
+        get<HabitTrackerDatabase>().habitDao()
+    }
 
-    @Provides
-    fun provideHabitRepository(habitDayDao: HabitDayDao, habitDao: HabitDao): HabitRepository = HabitRepositoryImpl(habitDayDao, habitDao)
-
+    single<HabitRepository> {
+        HabitRepositoryImpl(
+            habitDayDao = get(),
+            habitDao = get()
+        )
+    }
 }

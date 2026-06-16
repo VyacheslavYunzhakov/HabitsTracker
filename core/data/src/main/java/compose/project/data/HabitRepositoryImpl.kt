@@ -9,9 +9,8 @@ import compose.project.data.model.HabitDay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
-class HabitRepositoryImpl @Inject constructor(
+class HabitRepositoryImpl (
     private val habitDayDao: HabitDayDao,
     private val habitDao: HabitDao
 ) : HabitRepository {
