@@ -25,6 +25,7 @@ dependencyResolutionManagement {
 rootProject.name = "HabitsTracker"
 include(":app")
 include(":feature:home")
-include(":core:designsystem")
 include(":core:domain")
 include(":core:data")
+include(":shared")
+include(":core:designsystem")

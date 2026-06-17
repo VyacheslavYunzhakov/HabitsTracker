@@ -33,8 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import compose.project.data.model.HabitStatus
-import compose.project.designsystem.R
 import compose.project.home.CalendarUiState
 import compose.project.home.DayUiModel
 import compose.project.home.MonthUiModel
@@ -132,15 +130,6 @@ private fun YearDayCell(
     streakPart: StreakPart,
     modifier: Modifier = Modifier
 ) {
-    val status = dayUiModel?.habitStatus
-
-    val baseColor = when (status) {
-        HabitStatus.COMPLETED -> colorResource(R.color.habit_completed)
-        HabitStatus.MISSED -> colorResource(R.color.habit_missed)
-        HabitStatus.UNMARKED -> colorResource(R.color.habit_unmarked)
-        null -> Color.Transparent
-    }
-
 
     val shape = when (streakPart) {
         StreakPart.SINGLE -> CircleShape
@@ -176,12 +165,6 @@ private fun YearDayCell(
 
                 StreakPart.NONE -> Modifier
             }
-
-            Box(
-                modifier = backgroundModifier
-                    .clip(shape)
-                    .background(baseColor)
-            )
         }
     }
 }
