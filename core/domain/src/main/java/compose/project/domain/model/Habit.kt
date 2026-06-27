@@ -1,8 +1,0 @@
-package compose.project.domain.model
-
-data class Habit(
-    val id: Long = 0,
-    val name: String,
-    val iconResName: String,
-    val isAdded: Boolean = false
-)

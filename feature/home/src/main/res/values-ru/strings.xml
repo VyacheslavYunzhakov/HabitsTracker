@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="month_switcher_month">Месяц</string>
-    <string name="month_switcher_year">Год</string>
-    <string name="Choose_a_habit">Выберите привычку</string>
-    <string name="no_more_habits">Нет доступных привычек для добавления</string>
-</resources>

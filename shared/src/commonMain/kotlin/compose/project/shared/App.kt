@@ -1,4 +1,4 @@
-package compose.project.shared
+﻿package compose.project.shared
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -7,7 +7,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import cafe.adriel.voyager.navigator.CurrentScreen
 import cafe.adriel.voyager.navigator.Navigator
 import compose.project.designsystem.theme.HabitsTrackerTheme
-import compose.project.home2.navigation.HomeScreen
+import compose.project.home.navigation.HomeScreen
 
 
 @Composable

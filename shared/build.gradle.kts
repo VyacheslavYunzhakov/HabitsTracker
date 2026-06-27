@@ -48,7 +48,7 @@ kotlin {
                 implementation(libs.compose.ui)
                 implementation(libs.compose.material3)
                 implementation(project(":core:designsystem"))
-                implementation(project(":home2"))
+                implementation(project(":feature:home"))
                 implementation(libs.voyager.navigator)
             }
         }

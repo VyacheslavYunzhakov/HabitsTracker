@@ -25,20 +25,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-The project is a Habits Tracker app currently **migrating from Android-only to Kotlin Multiplatform (KMP)**. This migration is ongoing — every original Android module has a corresponding `*2`/`*2` KMP counterpart being built in parallel.
+The project is a Habits Tracker app built with **Kotlin Multiplatform (KMP)**. All modules are KMP modules targeting Android and iOS.
 
 ### Module Map
 
 | Module | Type | Purpose |
 |---|---|---|
 | `:app` | Android app | Entry point, wires Koin modules, hosts Navigation |
-| `:feature:home` | Android lib | Home screen — Android-only (being replaced by `:home2`) |
-| `:core:domain` | Android lib | Domain interfaces, models (`Habit`, `HabitDay`, `HabitStatus`) |
-| `:core:data` | Android lib | Room database, DAOs, `HabitRepositoryImpl` |
+| `:feature:home` | **KMP** | Home screen — Compose Multiplatform with Voyager navigation |
+| `:core:domain` | **KMP** | Domain interfaces, models (`Habit`, `HabitDay`, `HabitStatus`) |
+| `:core:data` | **KMP** | Data layer with Room via expect/actual for cross-platform DB factory |
 | `:core:designsystem` | **KMP** | Compose Multiplatform shared UI components |
-| `:home2` | **KMP** | Home feature — KMP replacement for `:feature:home` |
-| `:core:domain2` | **KMP** | Domain layer for KMP |
-| `:core:data2` | **KMP** | Data layer with Room via expect/actual for cross-platform DB factory |
 | `:shared` | **KMP** | General shared KMP module with Voyager navigation |
 
 KMP modules target: `androidTarget`, `iosArm64`, `iosSimulatorArm64`.
@@ -60,13 +57,13 @@ Koin 4.x with three modules chained: `dataModule` → `domainModule` → `viewMo
 
 ### Database
 
-Room 2.8.4. In `core/data`, the database has four migration versions with explicit `Migration` objects. In `core/data2` (KMP), a `DatabaseFactory` uses `expect`/`actual` to construct the Room database on each platform.
+Room 2.8.4. `core/data` uses a `DatabaseFactory` with `expect`/`actual` to construct the Room database on each platform.
 
 ### KMP Patterns
 
 - `expect`/`actual` is used for platform-specific classes (e.g., `DatabaseFactory`, `Platform`).
 - `kotlinx-datetime` is used instead of `java.time` everywhere in KMP modules.
-- Voyager (`cafe.adriel.voyager`) handles navigation inside KMP/shared modules; AndroidX Navigation Compose is used in the Android-only modules.
+- Voyager (`cafe.adriel.voyager`) handles navigation inside KMP/shared modules.
 
 ### State Management
 

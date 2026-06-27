@@ -38,9 +38,9 @@ android {
 
 dependencies {
 implementation(project(":core:designsystem"))
-    implementation(project(":home2"))
-    implementation(project(":core:data2"))
-    implementation(project(":core:domain2"))
+    implementation(project(":feature:home"))
+    implementation(project(":core:data"))
+    implementation(project(":core:domain"))
     implementation(project(":shared"))
     implementation(libs.koin.compose)
     testImplementation(libs.junit)
