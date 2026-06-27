@@ -1,15 +1,16 @@
 package compose.project.home
 
 import androidx.lifecycle.ViewModel
-import compose.project.domain.HabitInteractor
 
 import androidx.lifecycle.viewModelScope
-import compose.project.data.model.HabitDay
-import compose.project.data.model.HabitStatus
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import androidx.compose.runtime.Immutable
+import compose.project.domain.HabitInteractor
+import compose.project.domain.model.Habit
+import compose.project.domain.model.HabitDay
+import compose.project.domain.model.HabitStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,13 +22,13 @@ import java.time.YearMonth
 
 @Immutable
 data class HabitTrackerUiState(
-    val habits: List<compose.project.data.local.HabitEntity> = emptyList(),
+    val habits: List<Habit> = emptyList(),
     val selectedHabitId: Long? = null,
     val switcherState: CalendarSwitcherUiState = CalendarSwitcherUiState(),
     val calendarState: CalendarUiState = CalendarUiState(),
     val panelState: HabitPanelUiState = HabitPanelUiState.Hidden,
     val showAddHabitSelection: Boolean = false,
-    val availableHabits: List<compose.project.data.local.HabitEntity> = emptyList(),
+    val availableHabits: List<Habit> = emptyList(),
     val isLoading: Boolean = true
 )
 

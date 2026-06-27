@@ -3,6 +3,7 @@ package compose.project.data.local
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import compose.project.domain.model.Habit
 
 @Entity(
     tableName = "habits",
@@ -15,3 +16,12 @@ data class HabitEntity(
     val iconResName: String,
     val isAdded: Boolean = false
 )
+
+fun HabitEntity.toModel(): Habit {
+    return Habit(
+        id = id,
+        name = name,
+        iconResName = iconResName,
+        isAdded = isAdded
+    )
+}

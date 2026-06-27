@@ -5,9 +5,12 @@ import compose.project.data.local.HabitDao
 import compose.project.data.local.HabitEntity
 import compose.project.data.local.toModel
 import compose.project.data.local.toEntity
-import compose.project.data.model.HabitDay
+import compose.project.domain.HabitRepository
+import compose.project.domain.model.Habit
+import compose.project.domain.model.HabitDay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class HabitRepositoryImpl (
@@ -15,12 +18,17 @@ class HabitRepositoryImpl (
     private val habitDao: HabitDao
 ) : HabitRepository {
 
-    override fun getAddedHabits(): Flow<List<HabitEntity>> {
+    override fun getAddedHabits(): Flow<List<Habit>> {
         return habitDao.getAddedHabits()
+            .map { entities ->
+                entities.map { it.toModel() }
+            }
     }
 
-    override fun getAvailableHabits(): Flow<List<HabitEntity>> {
-        return habitDao.getAvailableHabits()
+    override fun getAvailableHabits(): Flow<List<Habit>> {
+        return habitDao.getAvailableHabits().map { entities ->
+            entities.map { it.toModel() }
+        }
     }
 
     override suspend fun addHabit(id: Long) {

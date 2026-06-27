@@ -1,15 +1,10 @@
 plugins {
     alias(libs.plugins.android.library)
-    id("com.google.devtools.ksp")
 }
 
 android {
     namespace = "compose.project.domain"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
@@ -34,7 +29,6 @@ android {
 }
 
 dependencies {
-    api(project(":core:data"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.koin.compose)

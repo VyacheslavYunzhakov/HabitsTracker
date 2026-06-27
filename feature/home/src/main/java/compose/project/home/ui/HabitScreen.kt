@@ -76,10 +76,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import compose.project.data.local.HabitEntity
-import compose.project.data.model.HabitStatus
 import compose.project.designsystem.HabitIconType
 import compose.project.designsystem.theme.HabitsTrackerTheme
+import compose.project.domain.model.Habit
+import compose.project.domain.model.HabitStatus
 import compose.project.home.CalendarSwitcherUiState
 import compose.project.home.CalendarUiState
 import compose.project.home.CalendarViewMode
@@ -243,7 +243,7 @@ fun EmptyHabitScreen(onAddHabitClicked: () -> Unit) {
 
 @Composable
 fun IconSelectionDialog(
-    availableHabits: List<HabitEntity>,
+    availableHabits: List<Habit>,
     onDismiss: () -> Unit,
     onHabitSelected: (Long) -> Unit
 ) {
@@ -351,7 +351,7 @@ fun CalendarWithPanel(
     onHabitSelected: (Long) -> Unit,
     onAddhabitClicked: () -> Unit,
     selectedHabitId: Long?,
-    habits: List<HabitEntity>
+    habits: List<Habit>
 ) {
     var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
     var panelBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
@@ -482,7 +482,7 @@ fun CalendarTabFrame(
 
 @Composable
 private fun HabitListPanel(
-    habits: List<HabitEntity>,
+    habits: List<Habit>,
     selectedHabitId: Long?,
     onHabitSelected: (Long) -> Unit,
     onAddHabitClicked: () -> Unit,
@@ -676,7 +676,7 @@ fun VerticalCalendarList(
     onHabitSelected: (Long) -> Unit,
     onAddHabitClicked: () -> Unit,
     selectedHabitId: Long?,
-    habits: List<HabitEntity>
+    habits: List<Habit>
 ) {
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = monthsBefore)
 
@@ -1025,8 +1025,8 @@ fun previewHabitTrackerUiState(): HabitTrackerUiState {
     return HabitTrackerUiState(
         isLoading = false,
         habits = listOf(
-            HabitEntity(id = 1, name = "Drink", iconResName = "drink_icon_selector"),
-            HabitEntity(id = 2, name = "Run", iconResName = "run_icon_selector")
+            Habit(id = 1, name = "Drink", iconResName = "drink_icon_selector"),
+            Habit(id = 2, name = "Run", iconResName = "run_icon_selector")
         ),
         selectedHabitId = 1,
         switcherState = CalendarSwitcherUiState(

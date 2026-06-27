@@ -1,9 +1,8 @@
 package compose.project.domain
 
-import compose.project.data.HabitRepository
 import compose.project.data.local.HabitEntity
-import compose.project.data.model.HabitDay
-import compose.project.data.model.HabitStatus
+import compose.project.domain.model.HabitDay
+import compose.project.domain.model.HabitStatus
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

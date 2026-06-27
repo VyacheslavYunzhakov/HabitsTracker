@@ -9,5 +9,4 @@ val domainModule = module {
     single<HabitInteractor> {
         HabitInteractorImpl(habitRepository = get())
     }
-
 }

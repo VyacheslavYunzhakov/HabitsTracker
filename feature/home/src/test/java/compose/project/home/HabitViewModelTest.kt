@@ -2,8 +2,8 @@ package compose.project.home
 
 import app.cash.turbine.test
 import compose.project.data.local.HabitEntity
-import compose.project.data.model.HabitDay
-import compose.project.data.model.HabitStatus
+import compose.project.domain.model.HabitDay
+import compose.project.domain.model.HabitStatus
 import compose.project.domain.HabitInteractor
 import io.mockk.coEvery
 import io.mockk.coVerify

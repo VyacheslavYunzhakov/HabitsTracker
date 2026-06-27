@@ -14,7 +14,7 @@ appcompat = "1.7.1"
 material = "1.14.0"
 navigationRuntimeKtx = "2.9.8"
 foundation = "1.11.2"
-material3 = "1.4.0"
+material3 = "1.9.0"
 uiToolingPreview = "1.11.2"
 uiTooling = "1.11.2"
 liquid = "1.1.1"
@@ -27,7 +27,8 @@ kotlinTest = "2.4.0"
 runner = "1.7.0"
 core = "1.7.0"
 compose = "1.11.1"
-composeMaterial3 = "1.9.0"
+voyager = "2.2.21-1.10.3"
+datetime = "0.8.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -45,6 +46,7 @@ androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 liquid = { module = "io.github.fletchmckee.liquid:liquid", version.ref = "liquid" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref  = "datetime" }
 koin-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
@@ -68,13 +70,17 @@ androidx-core = { group = "androidx.test", name = "core", version.ref = "core" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose" }
-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMaterial3" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 compose-animation = { module = "org.jetbrains.compose.animation:animation", version.ref = "compose" }
+compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose" }
+compose-components-uiToolingPreview = {module = "org.jetbrains.compose.components:components-ui-tooling-preview", version.ref = "compose"}
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose" }
+voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }
 
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+multiplatform-application = {id = "com.android.kotlin.multiplatform.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization" }

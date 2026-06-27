@@ -1,19 +1,18 @@
 package compose.project.domain
 
-import compose.project.data.HabitRepository
-import compose.project.data.local.HabitEntity
-import compose.project.data.model.HabitDay
+import compose.project.domain.model.Habit
+import compose.project.domain.model.HabitDay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 class HabitInteractorImpl (private val habitRepository: HabitRepository): HabitInteractor {
-    override fun getAddedHabits(): Flow<List<HabitEntity>> {
+    override fun getAddedHabits(): Flow<List<Habit>> {
         return habitRepository.getAddedHabits().flowOn(Dispatchers.Default)
     }
 
-    override fun getAvailableHabits(): Flow<List<HabitEntity>> {
+    override fun getAvailableHabits(): Flow<List<Habit>> {
         return habitRepository.getAvailableHabits().flowOn(Dispatchers.Default)
     }
 

@@ -1,6 +1,6 @@
 package compose.project.data.local
 
-import compose.project.data.model.HabitDay
+import compose.project.domain.model.HabitDay
 
 fun HabitDayEntity.toModel(): HabitDay = HabitDay(
     habitId = habitId,

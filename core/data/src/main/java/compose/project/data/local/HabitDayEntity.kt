@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import compose.project.data.model.HabitStatus
+import compose.project.domain.model.HabitStatus
 import java.time.Instant
 import java.time.LocalDate
 

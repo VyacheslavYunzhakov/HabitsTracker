@@ -1,7 +1,7 @@
 package compose.project.data.local
 
 import androidx.room.TypeConverter
-import compose.project.data.model.HabitStatus
+import compose.project.domain.model.HabitStatus
 import java.time.Instant
 import java.time.LocalDate
 

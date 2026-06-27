@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import compose.project.designsystem.HabitIconType
-import compose.project.data.model.HabitStatus
+import compose.project.domain.model.HabitStatus
 import compose.project.home.DayUiModel
 import compose.project.home.HabitIcon
 import compose.project.home.HabitPanelUiState

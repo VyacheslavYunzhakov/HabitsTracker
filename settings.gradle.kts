@@ -8,6 +8,7 @@ pluginManagement {
             }
         }
         mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
         gradlePluginPortal()
     }
 }
@@ -29,3 +30,6 @@ include(":core:domain")
 include(":core:data")
 include(":shared")
 include(":core:designsystem")
+include(":home2")
+include(":core:domain2")
+include(":core:data2")

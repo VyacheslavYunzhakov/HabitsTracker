@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.painterResource
 import compose.project.designsystem.HabitIconType
-import compose.project.data.model.HabitStatus
+import compose.project.domain.model.HabitStatus
 
 @Composable
 fun HabitIcon(
