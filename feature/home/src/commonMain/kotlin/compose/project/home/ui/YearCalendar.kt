@@ -24,25 +24,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import compose.project.domain.model.HabitStatus
 import compose.project.home.CalendarUiState
 import compose.project.home.DayUiModel
 import compose.project.home.MonthUiModel
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.format
 import kotlinx.datetime.number
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
-
-enum class StreakPart {
-    SINGLE, START, MIDDLE, END, NONE
-}
 
 @Composable
 fun YearCalendar(
@@ -111,12 +105,9 @@ fun YearMonthCard(
 
         monthUiModel.weeks.forEach { week ->
             Row(modifier = Modifier.fillMaxWidth()) {
-                week.days.forEachIndexed { index, dayUiModel ->
-                    val streakPart = week.days.streakPartAt(index)
-
+                week.days.forEach { dayUiModel ->
                     YearDayCell(
                         dayUiModel = dayUiModel,
-                        streakPart = streakPart,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -128,62 +119,44 @@ fun YearMonthCard(
 @Composable
 private fun YearDayCell(
     dayUiModel: DayUiModel?,
-    streakPart: StreakPart,
     modifier: Modifier = Modifier
 ) {
+    val completedColor = Color(0xFF4CAF50)
+    val missedColor = MaterialTheme.colorScheme.error
+    val unmarkedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
 
-    val shape = when (streakPart) {
-        StreakPart.SINGLE -> CircleShape
-        StreakPart.START -> RoundedCornerShape(
-            topStart = 4.dp,
-            bottomStart = 4.dp
-        )
-        StreakPart.MIDDLE -> RectangleShape
-        StreakPart.END -> RoundedCornerShape(
-            topEnd = 4.dp,
-            bottomEnd = 4.dp,
-        )
-        StreakPart.NONE -> RectangleShape
+    val backgroundColor = when (dayUiModel?.habitStatus) {
+        HabitStatus.COMPLETED -> completedColor
+        HabitStatus.MISSED -> missedColor
+        HabitStatus.UNMARKED -> unmarkedColor
+        null -> Color.Transparent
+    }
+
+    val textColor = when (dayUiModel?.habitStatus) {
+        HabitStatus.COMPLETED, HabitStatus.MISSED -> Color.White
+        HabitStatus.UNMARKED -> MaterialTheme.colorScheme.onSurface
+        null -> Color.Transparent
     }
 
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .graphicsLayer {
-                clip = false
-            },
+            .padding(1.dp)
+            .background(backgroundColor, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         if (dayUiModel != null) {
-            val backgroundModifier = when (streakPart) {
-                StreakPart.SINGLE -> Modifier
-                    .fillMaxSize()
-                StreakPart.START,
-                StreakPart.MIDDLE,
-                StreakPart.END -> Modifier
-                    .fillMaxWidth()
-                    .height(14.dp)
-
-                StreakPart.NONE -> Modifier
-            }
+            Text(
+                text = dayUiModel.date.day.toString(),
+                fontSize = 7.sp,
+                lineHeight = 7.sp,
+                fontWeight = FontWeight.Medium,
+                color = textColor,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                softWrap = false
+            )
         }
-    }
-}
-
-private fun List<DayUiModel?>.streakPartAt(index: Int): StreakPart {
-    val current = getOrNull(index) ?: return StreakPart.NONE
-
-    val prev = getOrNull(index - 1)
-    val next = getOrNull(index + 1)
-
-    val hasPrev = prev?.habitStatus == current.habitStatus
-    val hasNext = next?.habitStatus == current.habitStatus
-
-    return when {
-        !hasPrev && !hasNext -> StreakPart.SINGLE
-        !hasPrev && hasNext -> StreakPart.START
-        hasPrev && !hasNext -> StreakPart.END
-        else -> StreakPart.MIDDLE
     }
 }
 
