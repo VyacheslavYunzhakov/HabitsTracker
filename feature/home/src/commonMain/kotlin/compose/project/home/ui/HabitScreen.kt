@@ -42,7 +42,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.State
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -352,9 +351,7 @@ fun CalendarWithPanel(
     habits: List<Habit>
 ) {
     var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
-    var panelBounds by remember { mutableStateOf<Rect?>(null) }
-
-    val latestPanelBounds by rememberUpdatedState(panelBounds)
+    val panelBoundsRef = remember { BoundsRef() }
 
     Box(
         modifier = Modifier
@@ -365,7 +362,7 @@ fun CalendarWithPanel(
 
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    val insidePanel = latestPanelBounds?.contains(down.position) == true
+                    val insidePanel = panelBoundsRef.value?.contains(down.position) == true
                     if (!insidePanel) {
                         panelAnchor = null
                     }
@@ -411,9 +408,7 @@ fun CalendarWithPanel(
                 onStatusSelected(day, status)
             },
             onBoundsChanged = { newBounds ->
-                if (newBounds != panelBounds) {
-                    panelBounds = newBounds
-                }
+                panelBoundsRef.value = newBounds
             },
             iconType = iconType,
             onHideFinished = {
@@ -1024,3 +1019,5 @@ data class PanelAnchor(
     val x: Float,
     val y: Float
 )
+
+private class BoundsRef(var value: Rect? = null)
