@@ -23,7 +23,7 @@ kotlin {
         }
     }
 
-    val xcfName = "sharedKit"
+    val xcfName = "Shared"
 
     jvm()
 
@@ -76,6 +76,8 @@ kotlin {
 
         iosMain {
             dependencies {
+                implementation(project(":core:data"))
+                implementation(libs.koin.core)
             }
         }
     }
