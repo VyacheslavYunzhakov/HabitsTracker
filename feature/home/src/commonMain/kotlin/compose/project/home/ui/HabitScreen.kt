@@ -1,6 +1,7 @@
 ﻿package compose.project.home.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,6 +53,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -59,11 +61,11 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -915,16 +917,19 @@ private fun MonthYearButton(
             .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
     ) {
-        Text(
-            text = text,
-            style = textStyle,
-            color = Color.Black,
-            modifier = Modifier.padding(horizontal = hPad, vertical = vPad)
-        )
+        Canvas(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            drawText(
+                textLayoutResult = textLayout,
+                color = Color.Black,
+                topLeft = Offset(
+                    with(density) { hPad.toPx() },
+                    with(density) { vPad.toPx() }
+                )
+            )
+        }
 
-        // Overlay layer: white text clipped to the indicator-overlap region only.
-        // The clip box is positioned at the overlap start and sized to the overlap width.
-        // The white Text inside is shifted back left so it visually aligns with the black text.
         val bounds = buttonBounds
         if (bounds != null && indicatorBounds != null) {
             val textLeft = with(density) { hPad.toPx() }
@@ -943,26 +948,29 @@ private fun MonthYearButton(
             val localLeft = overlapLeft - textRect.left
 
             if (overlapWidth > 0f) {
-                Box(
+
+                Canvas(
                     modifier = Modifier
                         .padding(start = hPad, top = vPad)
-                        .offset {
-                            IntOffset(localLeft.roundToInt(), 0)
-                        }
                         .size(
-                            width = with(density) { overlapWidth.toDp() },
+                            width = with(density) { textWidth.toDp() },
                             height = with(density) { textHeight.toDp() }
                         )
                         .clipToBounds()
                 ) {
-                    Text(
-                        text = text,
-                        style = textStyle,
-                        color = Color.White,
-                        modifier = Modifier.offset {
-                            IntOffset(-localLeft.roundToInt(), 0)
-                        }
-                    )
+
+                    clipRect(
+                        left = localLeft,
+                        top = 0f,
+                        right = localLeft + overlapWidth,
+                        bottom = size.height
+                    ) {
+
+                        drawText(
+                            textLayoutResult = textLayout,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
