@@ -25,6 +25,8 @@ kotlin {
 
     val xcfName = "sharedKit"
 
+    jvm()
+
     iosArm64 {
         binaries.framework {
             baseName = xcfName
