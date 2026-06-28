@@ -927,17 +927,31 @@ private fun MonthYearButton(
         // The white Text inside is shifted back left so it visually aligns with the black text.
         val bounds = buttonBounds
         if (bounds != null && indicatorBounds != null) {
-            val localLeft = (maxOf(bounds.left, indicatorBounds.left) - bounds.left)
-            val localRight = (minOf(bounds.right, indicatorBounds.right) - bounds.left)
-            val overlapWidth = localRight - localLeft
+            val textLeft = with(density) { hPad.toPx() }
+            val textTop = with(density) { vPad.toPx() }
+
+            val textRect = Rect(
+                left = bounds.left + textLeft,
+                top = bounds.top + textTop,
+                right = bounds.left + textLeft + textWidth,
+                bottom = bounds.top + textTop + textHeight
+            )
+            val overlapLeft = maxOf(textRect.left, indicatorBounds.left)
+            val overlapRight = minOf(textRect.right, indicatorBounds.right)
+
+            val overlapWidth = overlapRight - overlapLeft
+            val localLeft = overlapLeft - textRect.left
 
             if (overlapWidth > 0f) {
                 Box(
                     modifier = Modifier
-                        .offset { IntOffset(localLeft.roundToInt(), 0) }
+                        .padding(start = hPad, top = vPad)
+                        .offset {
+                            IntOffset(localLeft.roundToInt(), 0)
+                        }
                         .size(
                             width = with(density) { overlapWidth.toDp() },
-                            height = with(density) { buttonHeight.toDp() }
+                            height = with(density) { textHeight.toDp() }
                         )
                         .clipToBounds()
                 ) {
@@ -945,9 +959,9 @@ private fun MonthYearButton(
                         text = text,
                         style = textStyle,
                         color = Color.White,
-                        modifier = Modifier
-                            .offset { IntOffset(-localLeft.roundToInt(), 0) }
-                            .padding(horizontal = hPad, vertical = vPad)
+                        modifier = Modifier.offset {
+                            IntOffset(-localLeft.roundToInt(), 0)
+                        }
                     )
                 }
             }
