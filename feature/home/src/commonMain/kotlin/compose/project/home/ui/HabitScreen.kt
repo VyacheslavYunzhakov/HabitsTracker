@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,14 +42,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.State
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -66,7 +68,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -98,7 +99,6 @@ import io.github.fletchmckee.liquid.LiquidState
 import io.github.fletchmckee.liquid.liquefiable
 import io.github.fletchmckee.liquid.liquid
 import io.github.fletchmckee.liquid.rememberLiquidState
-import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
@@ -574,28 +574,25 @@ fun MonthYearSwitcher(
     val monthText = stringResource(Res.string.month_switcher_month)
     val yearText = stringResource(Res.string.month_switcher_year)
     val textMeasurer = rememberTextMeasurer()
-    val density = LocalDensity.current
 
     var monthBounds by remember { mutableStateOf<Rect?>(null) }
     var yearBounds by remember { mutableStateOf<Rect?>(null) }
 
-    val progress by remember(pagerState) {
+    // derivedStateOf: читается только в фазе рисования — никаких рекомпозиций при скролле
+    val indicatorBoundsState = remember(pagerState) {
         derivedStateOf {
-            (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+            val m = monthBounds
+            val y = yearBounds
+            val progress = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
                 .coerceIn(0f, 1f)
+            if (m == null || y == null) null
+            else Rect(
+                left = lerp(m.left, y.left, progress),
+                top = lerp(m.top, y.top, progress),
+                right = lerp(m.right, y.right, progress),
+                bottom = lerp(m.bottom, y.bottom, progress)
+            )
         }
-    }
-
-    val indicatorBounds = remember(progress, monthBounds, yearBounds) {
-        val m = monthBounds
-        val y = yearBounds
-        if (m == null || y == null) null
-        else Rect(
-            left = lerp(m.left, y.left, progress),
-            top = lerp(m.top, y.top, progress),
-            right = lerp(m.right, y.right, progress),
-            bottom = lerp(m.bottom, y.bottom, progress)
-        )
     }
 
     Box(
@@ -630,30 +627,27 @@ fun MonthYearSwitcher(
                 }
                 .padding(6.dp)
         ) {
-            indicatorBounds?.let { rect ->
-                Box(
-                    modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                rect.left.roundToInt(),
-                                rect.top.roundToInt()
-                            )
-                        }
-                        .size(
-                            width = with(density) { rect.width.toDp() },
-                            height = with(density) { rect.height.toDp() }
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .drawBehind {
+                        val rect = indicatorBoundsState.value ?: return@drawBehind
+                        val cornerRadius = 20.dp.toPx()
+                        drawRoundRect(
+                            color = Color(0xCC3C6FB6),
+                            topLeft = Offset(rect.left, rect.top),
+                            size = Size(rect.width, rect.height),
+                            cornerRadius = CornerRadius(cornerRadius)
                         )
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xCC3C6FB6))
-                )
-            }
+                    }
+            )
 
             Row {
                 MonthYearButton(
                     text = monthText,
                     onClick = { onSelectionChanged(CalendarViewMode.MONTH) },
                     textMeasurer = textMeasurer,
-                    indicatorBounds = indicatorBounds,
+                    indicatorBoundsState = indicatorBoundsState,
                     onBoundsChanged = { monthBounds = it }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -661,7 +655,7 @@ fun MonthYearSwitcher(
                     text = yearText,
                     onClick = { onSelectionChanged(CalendarViewMode.YEAR) },
                     textMeasurer = textMeasurer,
-                    indicatorBounds = indicatorBounds,
+                    indicatorBoundsState = indicatorBoundsState,
                     onBoundsChanged = { yearBounds = it }
                 )
             }
@@ -887,21 +881,20 @@ private fun MonthYearButton(
     text: String,
     onClick: () -> Unit,
     textMeasurer: TextMeasurer = rememberTextMeasurer(),
-    indicatorBounds: Rect?,
+    indicatorBoundsState: State<Rect?>,
     onBoundsChanged: (Rect) -> Unit
 ) {
     val density = LocalDensity.current
     val textStyle = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal)
     val textLayout = remember(text, textStyle) { textMeasurer.measure(text, textStyle) }
     val textWidth = textLayout.size.width.toFloat()
-    val textHeight = textLayout.size.height.toFloat()
 
-    val hPad = 16.dp
-    val vPad = 8.dp
-    val buttonWidth = textWidth + with(density) { hPad.toPx() } * 2
-    val buttonHeight = textHeight + with(density) { vPad.toPx() } * 2
+    val hPadPx = with(density) { 16.dp.toPx() }
+    val vPadPx = with(density) { 8.dp.toPx() }
+    val buttonWidth = textWidth + hPadPx * 2
+    val buttonHeight = textLayout.size.height.toFloat() + vPadPx * 2
 
-    var buttonBounds by remember { mutableStateOf<Rect?>(null) }
+    var buttonLeft by remember { mutableStateOf(0f) }
 
     Box(
         modifier = Modifier
@@ -911,66 +904,31 @@ private fun MonthYearButton(
             )
             .onGloballyPositioned { coords ->
                 val bounds = coords.boundsInParent()
-                buttonBounds = bounds
+                buttonLeft = bounds.left
                 onBoundsChanged(bounds)
             }
             .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
     ) {
-        Canvas(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
             drawText(
                 textLayoutResult = textLayout,
                 color = Color.Black,
-                topLeft = Offset(
-                    with(density) { hPad.toPx() },
-                    with(density) { vPad.toPx() }
-                )
+                topLeft = Offset(hPadPx, vPadPx)
             )
-        }
 
-        val bounds = buttonBounds
-        if (bounds != null && indicatorBounds != null) {
-            val textLeft = with(density) { hPad.toPx() }
-            val textTop = with(density) { vPad.toPx() }
+            val indicator = indicatorBoundsState.value ?: return@Canvas
+            val bLeft = buttonLeft
+            val clipLeft = maxOf(hPadPx, indicator.left - bLeft)
+            val clipRight = minOf(hPadPx + textWidth, indicator.right - bLeft)
 
-            val textRect = Rect(
-                left = bounds.left + textLeft,
-                top = bounds.top + textTop,
-                right = bounds.left + textLeft + textWidth,
-                bottom = bounds.top + textTop + textHeight
-            )
-            val overlapLeft = maxOf(textRect.left, indicatorBounds.left)
-            val overlapRight = minOf(textRect.right, indicatorBounds.right)
-
-            val overlapWidth = overlapRight - overlapLeft
-            val localLeft = overlapLeft - textRect.left
-
-            if (overlapWidth > 0f) {
-
-                Canvas(
-                    modifier = Modifier
-                        .padding(start = hPad, top = vPad)
-                        .size(
-                            width = with(density) { textWidth.toDp() },
-                            height = with(density) { textHeight.toDp() }
-                        )
-                        .clipToBounds()
-                ) {
-
-                    clipRect(
-                        left = localLeft,
-                        top = 0f,
-                        right = localLeft + overlapWidth,
-                        bottom = size.height
-                    ) {
-
-                        drawText(
-                            textLayoutResult = textLayout,
-                            color = Color.White
-                        )
-                    }
+            if (clipRight > clipLeft) {
+                clipRect(left = clipLeft, top = 0f, right = clipRight, bottom = size.height) {
+                    drawText(
+                        textLayoutResult = textLayout,
+                        color = Color.White,
+                        topLeft = Offset(hPadPx, vPadPx)
+                    )
                 }
             }
         }
