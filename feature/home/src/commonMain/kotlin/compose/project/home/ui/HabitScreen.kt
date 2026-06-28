@@ -520,8 +520,8 @@ private fun HabitListPanel(
                         .size(itemSize)
                         .clickable { onHabitSelected(habit.id) },
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.primaryContainer
+                    color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         HabitIcon(
