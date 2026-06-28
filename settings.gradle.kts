@@ -8,6 +8,7 @@ pluginManagement {
             }
         }
         mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
         gradlePluginPortal()
     }
 }
@@ -25,6 +26,7 @@ dependencyResolutionManagement {
 rootProject.name = "HabitsTracker"
 include(":app")
 include(":feature:home")
-include(":core:designsystem")
 include(":core:domain")
 include(":core:data")
+include(":shared")
+include(":core:designsystem")

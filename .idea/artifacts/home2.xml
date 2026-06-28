@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="home2">
+    <output-path>$PROJECT_DIR$/home2/build/libs</output-path>
+    <root id="archive" name="home2.jar">
+      <element id="module-output" name="HabitsTracker.home2.androidMain" />
+    </root>
+  </artifact>
+</component>
