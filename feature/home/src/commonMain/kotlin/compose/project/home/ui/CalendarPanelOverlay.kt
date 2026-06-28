@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +53,7 @@ private enum class PanelDirection {
 
 @Composable
 fun CalendarPanelOverlay(
-    panelAnchor: PanelAnchor?,
+    panelAnchorState: State<PanelAnchor?>,
     panelState: State<HabitPanelUiState>,
     onSelect: (DayUiModel, HabitStatus) -> Unit,
     onBoundsChanged: (Rect) -> Unit,
@@ -59,6 +61,7 @@ fun CalendarPanelOverlay(
     iconType: HabitIconType,
     onHideFinished: () -> Unit
 ) {
+    val panelAnchor = panelAnchorState.value
     panelAnchor?.let { anchor ->
         val density = LocalDensity.current
         val windowInfo = LocalWindowInfo.current
@@ -83,7 +86,9 @@ fun CalendarPanelOverlay(
         val currentPanelState = panelState.value
         val isVisible = currentPanelState is HabitPanelUiState.Visible
         val isClosing = (currentPanelState as? HabitPanelUiState.Visible)?.closingStatus != null
-        val isVisibleContent = isVisible || widthAnim.value > dayCellWidth.value
+        val isVisibleContent by remember {
+            derivedStateOf { isVisible || widthAnim.value > dayCellWidth.value }
+        }
 
         LaunchedEffect(isVisible, isClosing) {
             when {

@@ -353,21 +353,28 @@ fun CalendarWithPanel(
     selectedHabitId: Long?,
     habits: List<Habit>
 ) {
-    var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
+    val panelAnchorState = remember { mutableStateOf<PanelAnchor?>(null) }
     val panelBoundsRef = remember { BoundsRef() }
+
+    val onSelectStable = remember(onStatusSelected) {
+        { day: DayUiModel, status: HabitStatus -> onStatusSelected(day, status) }
+    }
+
+    val onBoundsChanged = remember {
+        { rect: Rect -> panelBoundsRef.value = rect }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .liquefiable(switcherLiquidState)
-            .pointerInput(panelAnchor) {
-                if (panelAnchor == null) return@pointerInput
-
+            .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    if (panelAnchorState.value == null) return@awaitEachGesture
                     val insidePanel = panelBoundsRef.value?.contains(down.position) == true
                     if (!insidePanel) {
-                        panelAnchor = null
+                        panelAnchorState.value = null
                     }
                 }
             }
@@ -388,7 +395,7 @@ fun CalendarWithPanel(
                         iconType = iconType,
                         onDayClick = { day, x, y ->
                             onDayClicked(day)
-                            panelAnchor = PanelAnchor(day = day, x = x, y = y)
+                            panelAnchorState.value = PanelAnchor(day = day, x = x, y = y)
                         },
                         onHabitSelected = onHabitSelected,
                         onAddHabitClicked = onAddHabitClicked,
@@ -404,18 +411,14 @@ fun CalendarWithPanel(
         }
 
         CalendarPanelOverlay(
-            panelAnchor = panelAnchor,
+            panelAnchorState = panelAnchorState,
             panelState = panelState,
             panelLiquidState = panelLiquidState,
-            onSelect = { day, status ->
-                onStatusSelected(day, status)
-            },
-            onBoundsChanged = { newBounds ->
-                panelBoundsRef.value = newBounds
-            },
+            onSelect = onSelectStable,
+            onBoundsChanged = onBoundsChanged,
             iconType = iconType,
             onHideFinished = {
-                panelAnchor = null
+                panelAnchorState.value = null
                 onHideFinished()
             }
         )
