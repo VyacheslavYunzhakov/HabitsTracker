@@ -1,6 +1,7 @@
 ﻿package compose.project.home.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.runtime.State
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -51,7 +52,7 @@ private enum class PanelDirection {
 @Composable
 fun CalendarPanelOverlay(
     panelAnchor: PanelAnchor?,
-    panelState: HabitPanelUiState,
+    panelState: State<HabitPanelUiState>,
     onSelect: (DayUiModel, HabitStatus) -> Unit,
     onBoundsChanged: (Rect) -> Unit,
     panelLiquidState: LiquidState,
@@ -79,8 +80,9 @@ fun CalendarPanelOverlay(
             if (openToRightFits) PanelDirection.Start else PanelDirection.End
         }
 
-        val isVisible = panelState is HabitPanelUiState.Visible
-        val isClosing = (panelState as? HabitPanelUiState.Visible)?.closingStatus != null
+        val currentPanelState = panelState.value
+        val isVisible = currentPanelState is HabitPanelUiState.Visible
+        val isClosing = (currentPanelState as? HabitPanelUiState.Visible)?.closingStatus != null
         val isVisibleContent = isVisible || widthAnim.value > dayCellWidth.value
 
         LaunchedEffect(isVisible, isClosing) {
@@ -133,8 +135,8 @@ fun CalendarPanelOverlay(
         val x = xPx.toInt().coerceIn(0, (screenWidthPx - currentWidthPx).toInt())
         val y = yPx.toInt()
 
-        val displayedStatus = when (panelState) {
-            is HabitPanelUiState.Visible -> panelState.closingStatus ?: anchor.day.habitStatus
+        val displayedStatus = when (currentPanelState) {
+            is HabitPanelUiState.Visible -> currentPanelState.closingStatus ?: anchor.day.habitStatus
             else -> anchor.day.habitStatus
         }
 

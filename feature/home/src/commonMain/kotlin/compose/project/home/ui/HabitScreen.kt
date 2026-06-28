@@ -123,9 +123,11 @@ fun HabitTrackerScreen(
     habitViewModel: HabitViewModel = koinViewModel()
 ) {
     val uiState by habitViewModel.uiState.collectAsStateWithLifecycle()
+    val panelState = habitViewModel.panelState.collectAsStateWithLifecycle()
 
     HabitTrackerScreenContent(
         uiState = uiState,
+        panelState = panelState,
         onStatusSelected = { date, habitStatus -> habitViewModel.toggleHabitStatus(date, habitStatus) },
         onDayClicked = { day -> habitViewModel.onDayClicked(day) },
         onHabitSelected = { habitViewModel.onHabitSelected(it) },
@@ -140,6 +142,7 @@ fun HabitTrackerScreen(
 @Composable
 fun HabitTrackerScreenContent(
     uiState: HabitTrackerUiState,
+    panelState: State<HabitPanelUiState>,
     switcherLiquidState: LiquidState = rememberLiquidState(),
     trashLiquidState: LiquidState = rememberLiquidState(),
     panelLiquidState: LiquidState = rememberLiquidState(),
@@ -184,7 +187,7 @@ fun HabitTrackerScreenContent(
 
                 CalendarWithPanel(
                     calendarState = uiState.calendarState,
-                    panelState = uiState.panelState,
+                    panelState = panelState,
                     switcherLiquidState = switcherLiquidState,
                     trashLiquidState = trashLiquidState,
                     panelLiquidState = panelLiquidState,
@@ -335,7 +338,7 @@ fun TrashCanIcon(
 @Composable
 fun CalendarWithPanel(
     calendarState: CalendarUiState,
-    panelState: HabitPanelUiState,
+    panelState: State<HabitPanelUiState>,
     switcherLiquidState: LiquidState,
     trashLiquidState: LiquidState,
     panelLiquidState: LiquidState,
@@ -928,6 +931,7 @@ fun HabitTrackerScreenPreview() {
     HabitsTrackerTheme {
         HabitTrackerScreenContent(
             uiState = previewHabitTrackerUiState(),
+            panelState = remember { mutableStateOf(HabitPanelUiState.Hidden) },
             onHabitSelected = {},
             onAddHabitClicked = {},
             onAddHabitDismiss = {},
@@ -948,10 +952,6 @@ fun previewHabitTrackerUiState(): HabitTrackerUiState {
         generateMonthPreview(currentMonth.plus(1L, DateTimeUnit.MONTH), today)
     )
 
-    val selectedDay = months[1].weeks
-        .flatMap { it.days }
-        .firstNotNullOf { it }
-
     return HabitTrackerUiState(
         isLoading = false,
         habits = listOf(
@@ -962,9 +962,6 @@ fun previewHabitTrackerUiState(): HabitTrackerUiState {
         calendarState = CalendarUiState(
             selectedDate = today,
             months = months
-        ),
-        panelState = HabitPanelUiState.Visible(
-            day = selectedDay
         ),
         availableHabits = emptyList(),
         showAddHabitSelection = false

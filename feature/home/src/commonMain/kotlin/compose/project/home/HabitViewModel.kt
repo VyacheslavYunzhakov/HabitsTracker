@@ -26,7 +26,6 @@ data class HabitTrackerUiState(
     val habits: List<Habit> = emptyList(),
     val selectedHabitId: Long? = null,
     val calendarState: CalendarUiState = CalendarUiState(),
-    val panelState: HabitPanelUiState = HabitPanelUiState.Hidden,
     val showAddHabitSelection: Boolean = false,
     val availableHabits: List<Habit> = emptyList(),
     val isLoading: Boolean = true
@@ -90,6 +89,9 @@ class HabitViewModel (
 
     private val _uiState = MutableStateFlow(HabitTrackerUiState())
     val uiState: StateFlow<HabitTrackerUiState> = _uiState.asStateFlow()
+
+    private val _panelState = MutableStateFlow<HabitPanelUiState>(HabitPanelUiState.Hidden)
+    val panelState: StateFlow<HabitPanelUiState> = _panelState.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -200,11 +202,7 @@ class HabitViewModel (
     }
 
     fun onDayClicked(day: DayUiModel) {
-        _uiState.update { state ->
-            state.copy(
-                panelState = HabitPanelUiState.Visible(day = day)
-            )
-        }
+        _panelState.value = HabitPanelUiState.Visible(day = day)
     }
 
     fun toggleHabitStatus(day: DayUiModel, habitStatus: HabitStatus) {
@@ -231,10 +229,10 @@ class HabitViewModel (
                 state.copy(
                     calendarState = state.calendarState.copy(
                         months = updatedMonths
-                    ),
-                    panelState = HabitPanelUiState.Visible(day = day, closingStatus = habitStatus)
+                    )
                 )
             }
+            _panelState.value = HabitPanelUiState.Visible(day = day, closingStatus = habitStatus)
         }
     }
 
@@ -342,11 +340,7 @@ class HabitViewModel (
     }
 
     fun onHideFinished() {
-        _uiState.update { state ->
-            state.copy(
-                panelState = HabitPanelUiState.Hidden
-            )
-        }
+        _panelState.value = HabitPanelUiState.Hidden
     }
 }
 
