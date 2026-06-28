@@ -25,17 +25,11 @@ import kotlin.time.Clock
 data class HabitTrackerUiState(
     val habits: List<Habit> = emptyList(),
     val selectedHabitId: Long? = null,
-    val switcherState: CalendarSwitcherUiState = CalendarSwitcherUiState(),
     val calendarState: CalendarUiState = CalendarUiState(),
     val panelState: HabitPanelUiState = HabitPanelUiState.Hidden,
     val showAddHabitSelection: Boolean = false,
     val availableHabits: List<Habit> = emptyList(),
     val isLoading: Boolean = true
-)
-
-@Immutable
-data class CalendarSwitcherUiState(
-    val selectedMode: CalendarViewMode = CalendarViewMode.MONTH
 )
 
 enum class CalendarViewMode {
@@ -241,16 +235,6 @@ class HabitViewModel (
                     panelState = HabitPanelUiState.Visible(day = day, closingStatus = habitStatus)
                 )
             }
-        }
-    }
-
-    fun onModeChanged(mode: CalendarViewMode) {
-        _uiState.update { state ->
-            state.copy(
-                switcherState = state.switcherState.copy(
-                    selectedMode = mode
-                )
-            )
         }
     }
 

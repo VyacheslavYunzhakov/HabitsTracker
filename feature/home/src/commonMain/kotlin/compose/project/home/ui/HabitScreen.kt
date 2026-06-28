@@ -36,7 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,7 +77,6 @@ import compose.project.designsystem.HabitIconType
 import compose.project.designsystem.theme.HabitsTrackerTheme
 import compose.project.domain.model.Habit
 import compose.project.domain.model.HabitStatus
-import compose.project.home.CalendarSwitcherUiState
 import compose.project.home.CalendarUiState
 import compose.project.home.CalendarViewMode
 import compose.project.home.DayUiModel
@@ -131,7 +129,6 @@ fun HabitTrackerScreen(
         uiState = uiState,
         onStatusSelected = { date, habitStatus -> habitViewModel.toggleHabitStatus(date, habitStatus) },
         onDayClicked = { day -> habitViewModel.onDayClicked(day) },
-        onModeChanged = { habitViewModel.onModeChanged(it) },
         onHabitSelected = { habitViewModel.onHabitSelected(it) },
         onAddHabitClicked = { habitViewModel.onAddHabitClicked() },
         onAddHabitDismiss = { habitViewModel.onAddHabitDismiss() },
@@ -150,7 +147,6 @@ fun HabitTrackerScreenContent(
     habitsListLiquidState: LiquidState = rememberLiquidState(),
     onStatusSelected: (DayUiModel, HabitStatus) -> Unit = { _, _ -> },
     onDayClicked: (DayUiModel) -> Unit = { _ -> },
-    onModeChanged: (CalendarViewMode) -> Unit = { _ -> },
     onHabitSelected: (Long) -> Unit,
     onAddHabitClicked: () -> Unit,
     onAddHabitDismiss: () -> Unit,
@@ -167,10 +163,6 @@ fun HabitTrackerScreenContent(
     } else {
         val pagerState = rememberPagerState(pageCount = { 2 })
         val scope = rememberCoroutineScope()
-
-        LaunchedEffect(pagerState.settledPage) {
-            onModeChanged(pagerState.settledPage.mode())
-        }
 
         CalendarTabFrame(
             switcherLiquidState = switcherLiquidState,
@@ -206,7 +198,7 @@ fun HabitTrackerScreenContent(
                     iconType = iconType,
                     onHideFinished = onHideFinished,
                     onHabitSelected = onHabitSelected,
-                    onAddhabitClicked = onAddHabitClicked
+                    onAddHabitClicked = onAddHabitClicked
                 )
             }
         )
@@ -355,7 +347,7 @@ fun CalendarWithPanel(
     onHideFinished: () -> Unit,
     habitsListLiquidState: LiquidState,
     onHabitSelected: (Long) -> Unit,
-    onAddhabitClicked: () -> Unit,
+    onAddHabitClicked: () -> Unit,
     selectedHabitId: Long?,
     habits: List<Habit>
 ) {
@@ -399,7 +391,7 @@ fun CalendarWithPanel(
                             panelAnchor = PanelAnchor(day = day, x = x, y = y)
                         },
                         onHabitSelected = onHabitSelected,
-                        onAddHabitClicked = onAddhabitClicked,
+                        onAddHabitClicked = onAddHabitClicked,
                         selectedHabitId = selectedHabitId,
                         habits = habits
                     )
@@ -578,7 +570,6 @@ fun MonthYearSwitcher(
     var monthBounds by remember { mutableStateOf<Rect?>(null) }
     var yearBounds by remember { mutableStateOf<Rect?>(null) }
 
-    // derivedStateOf: читается только в фазе рисования — никаких рекомпозиций при скролле
     val indicatorBoundsState = remember(pagerState) {
         derivedStateOf {
             val m = monthBounds
@@ -973,9 +964,6 @@ fun previewHabitTrackerUiState(): HabitTrackerUiState {
             Habit(id = 2, name = "Run", iconResName = "run_icon_selector")
         ),
         selectedHabitId = 1,
-        switcherState = CalendarSwitcherUiState(
-            selectedMode = CalendarViewMode.MONTH
-        ),
         calendarState = CalendarUiState(
             selectedDate = today,
             months = months
