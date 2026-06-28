@@ -47,11 +47,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -59,11 +59,11 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -358,7 +358,7 @@ fun CalendarWithPanel(
     habits: List<Habit>
 ) {
     var panelAnchor by remember { mutableStateOf<PanelAnchor?>(null) }
-    var panelBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var panelBounds by remember { mutableStateOf<Rect?>(null) }
 
     val latestPanelBounds by rememberUpdatedState(panelBounds)
 
@@ -574,8 +574,8 @@ fun MonthYearSwitcher(
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
 
-    var monthBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
-    var yearBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var monthBounds by remember { mutableStateOf<Rect?>(null) }
+    var yearBounds by remember { mutableStateOf<Rect?>(null) }
 
     val progress by remember(pagerState) {
         derivedStateOf {
@@ -588,7 +588,7 @@ fun MonthYearSwitcher(
         val m = monthBounds
         val y = yearBounds
         if (m == null || y == null) null
-        else androidx.compose.ui.geometry.Rect(
+        else Rect(
             left = lerp(m.left, y.left, progress),
             top = lerp(m.top, y.top, progress),
             right = lerp(m.right, y.right, progress),
@@ -885,29 +885,21 @@ private fun MonthYearButton(
     text: String,
     onClick: () -> Unit,
     textMeasurer: TextMeasurer = rememberTextMeasurer(),
-    indicatorBounds: androidx.compose.ui.geometry.Rect?,
-    onBoundsChanged: (androidx.compose.ui.geometry.Rect) -> Unit
+    indicatorBounds: Rect?,
+    onBoundsChanged: (Rect) -> Unit
 ) {
-    val textSizeConst = 18.sp
     val density = LocalDensity.current
-
-    val textStyle = TextStyle(
-        fontSize = textSizeConst,
-        fontWeight = FontWeight.Normal
-    )
-    val textLayout = remember(text, textStyle) {
-        textMeasurer.measure(text, textStyle)
-    }
+    val textStyle = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Normal)
+    val textLayout = remember(text, textStyle) { textMeasurer.measure(text, textStyle) }
     val textWidth = textLayout.size.width.toFloat()
     val textHeight = textLayout.size.height.toFloat()
 
-    val horizontalPadding = with(density) { 16.dp.toPx() }
-    val verticalPadding = with(density) { 8.dp.toPx() }
+    val hPad = 16.dp
+    val vPad = 8.dp
+    val buttonWidth = textWidth + with(density) { hPad.toPx() } * 2
+    val buttonHeight = textHeight + with(density) { vPad.toPx() } * 2
 
-    val buttonWidth = textWidth + horizontalPadding * 2
-    val buttonHeight = textHeight + verticalPadding * 2
-
-    var buttonBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var buttonBounds by remember { mutableStateOf<Rect?>(null) }
 
     Box(
         modifier = Modifier
@@ -922,40 +914,45 @@ private fun MonthYearButton(
             }
             .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
-            .drawWithContent {
-                val bounds = buttonBounds ?: return@drawWithContent
+    ) {
+        Text(
+            text = text,
+            style = textStyle,
+            color = Color.Black,
+            modifier = Modifier.padding(horizontal = hPad, vertical = vPad)
+        )
 
-                drawText(
-                    textMeasurer = textMeasurer,
-                    text = text,
-                    topLeft = Offset(horizontalPadding, verticalPadding),
-                    style = textStyle.copy(color = Color.Black)
-                )
+        // Overlay layer: white text clipped to the indicator-overlap region only.
+        // The clip box is positioned at the overlap start and sized to the overlap width.
+        // The white Text inside is shifted back left so it visually aligns with the black text.
+        val bounds = buttonBounds
+        if (bounds != null && indicatorBounds != null) {
+            val localLeft = (maxOf(bounds.left, indicatorBounds.left) - bounds.left)
+            val localRight = (minOf(bounds.right, indicatorBounds.right) - bounds.left)
+            val overlapWidth = localRight - localLeft
 
-                val indicator = indicatorBounds ?: return@drawWithContent
-
-                val overlapLeft = maxOf(bounds.left, indicator.left)
-                val overlapTop = maxOf(bounds.top, indicator.top)
-                val overlapRight = minOf(bounds.right, indicator.right)
-                val overlapBottom = minOf(bounds.bottom, indicator.bottom)
-
-                if (overlapRight > overlapLeft && overlapBottom > overlapTop) {
-                    val localLeft = overlapLeft - bounds.left
-                    val localTop = overlapTop - bounds.top
-                    val localRight = overlapRight - bounds.left
-                    val localBottom = overlapBottom - bounds.top
-
-                    clipRect(localLeft, localTop, localRight, localBottom) {
-                        drawText(
-                            textMeasurer = textMeasurer,
-                            text = text,
-                            topLeft = Offset(horizontalPadding, verticalPadding),
-                            style = textStyle.copy(color = Color.White)
+            if (overlapWidth > 0f) {
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(localLeft.roundToInt(), 0) }
+                        .size(
+                            width = with(density) { overlapWidth.toDp() },
+                            height = with(density) { buttonHeight.toDp() }
                         )
-                    }
+                        .clipToBounds()
+                ) {
+                    Text(
+                        text = text,
+                        style = textStyle,
+                        color = Color.White,
+                        modifier = Modifier
+                            .offset { IntOffset(-localLeft.roundToInt(), 0) }
+                            .padding(horizontal = hPad, vertical = vPad)
+                    )
                 }
             }
-    )
+        }
+    }
 }
 
 
