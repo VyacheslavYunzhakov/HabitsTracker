@@ -1,7 +1,9 @@
 ﻿package compose.project.data.local
 
+import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
@@ -13,6 +15,7 @@ import androidx.sqlite.execSQL
     exportSchema = false,
 )
 @TypeConverters(HabitTrackerTypeConverters::class)
+@ConstructedBy(HabitTrackerDatabaseConstructor::class)
 abstract class HabitTrackerDatabase : RoomDatabase() {
 
     abstract fun habitDayDao(): HabitDayDao
@@ -168,4 +171,8 @@ abstract class HabitTrackerDatabase : RoomDatabase() {
             }
         }
     }
+}
+
+expect object HabitTrackerDatabaseConstructor : RoomDatabaseConstructor<HabitTrackerDatabase> {
+    override fun initialize(): HabitTrackerDatabase
 }
