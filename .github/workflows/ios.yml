@@ -75,41 +75,59 @@ jobs:
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO
 
+      - name: Wait for simulator
+        run: |
+          xcrun simctl bootstatus "${{ env.SIMULATOR_UDID }}" || true
+          sleep 5
+
       - name: Install app
         run: |
           APP_PATH=$(find ./build -name "HabitsTracker.app" -path "*Debug-iphonesimulator*" | head -1)
           [ -z "$APP_PATH" ] && { find ./build -name "*.app"; exit 1; }
           xcrun simctl install "${{ env.SIMULATOR_UDID }}" "$APP_PATH"
 
-      - name: Launch and capture crash
+      - name: Capture screenshots
         run: |
+          mkdir -p screenshots
           UDID="${{ env.SIMULATOR_UDID }}"
           BUNDLE_ID="${{ env.BUNDLE_ID }}"
-          
-          xcrun simctl spawn "$UDID" log stream --level debug \
-            --predicate "processImagePath CONTAINS 'HabitsTracker'" > app_log.txt 2>&1 &
-          LOG_PID=$!
-          sleep 2
-          
-          # Launch in background, kill it after 30s without needing `timeout`
-          xcrun simctl launch --console-pty "$UDID" "$BUNDLE_ID" > launch_output.txt 2>&1 &
-          LAUNCH_PID=$!
-          sleep 30
-          kill $LAUNCH_PID 2>/dev/null || true
-          kill $LOG_PID 2>/dev/null || true
-          
-          echo "=== launch output ==="
-          cat launch_output.txt || true
-          echo "=== streamed log (filtered) ==="
-          grep -i "exception\|error\|koin\|room\|kotlin\|fatal\|terminat" app_log.txt | head -80 || true
-          echo "=== crash reports ==="
-          find ~/Library/Logs/DiagnosticReports -name "*HabitsTracker*" 2>/dev/null -exec cat {} \; || echo "none"
 
-      - name: Upload logs
+          idb_companion --udid "$UDID" &
+          IDB_PID=$!
+          sleep 3
+          idb connect "$UDID" || true
+
+          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+          sleep 4
+
+          # 1. Main screen — "+" button
+          xcrun simctl io "$UDID" screenshot screenshots/01_main_screen.png
+          echo "Screenshot 1: main screen"
+
+          # 2. Tap "+" → habit selection dialog
+          idb ui tap 195 422 || true
+          sleep 2
+          xcrun simctl io "$UDID" screenshot screenshots/02_habit_selection_dialog.png
+          echo "Screenshot 2: habit selection dialog"
+
+          # 3. Tap first habit icon (Drink)
+          idb ui tap 84 442 || true
+          sleep 2
+          xcrun simctl io "$UDID" screenshot screenshots/03_habit_calendar.png
+          echo "Screenshot 3: habit calendar"
+
+          # 4. Tap a calendar day → status panel
+          idb ui tap 195 206 || true
+          sleep 2
+          xcrun simctl io "$UDID" screenshot screenshots/04_status_panel.png
+          echo "Screenshot 4: status panel"
+
+          kill $IDB_PID 2>/dev/null || true
+          ls -la screenshots/
+
+      - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-logs
-          path: |
-            app_log.txt
-            launch_output.txt
+          name: ios-screenshots
+          path: screenshots/

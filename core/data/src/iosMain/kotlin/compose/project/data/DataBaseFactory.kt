@@ -16,7 +16,12 @@ actual class DatabaseFactory {
             name = dbFile
         )
             .setDriver(BundledSQLiteDriver())
-            .fallbackToDestructiveMigration(true)
+            .addMigrations(
+                HabitTrackerDatabase.MIGRATION_1_2,
+                HabitTrackerDatabase.MIGRATION_2_3,
+                HabitTrackerDatabase.MIGRATION_3_4
+            )
+            .addCallback(HabitTrackerDatabase.SEED_CALLBACK)
             .build()
     }
 }
