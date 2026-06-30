@@ -91,38 +91,24 @@ jobs:
           mkdir -p screenshots
           UDID="${{ env.SIMULATOR_UDID }}"
           BUNDLE_ID="${{ env.BUNDLE_ID }}"
-
-          idb_companion --udid "$UDID" &
-          IDB_PID=$!
-          sleep 3
-          idb connect "$UDID" || true
-
+          
           xcrun simctl launch "$UDID" "$BUNDLE_ID"
           sleep 4
-
-          # 1. Main screen — "+" button
+          
           xcrun simctl io "$UDID" screenshot screenshots/01_main_screen.png
-          echo "Screenshot 1: main screen"
-
-          # 2. Tap "+" → habit selection dialog
-          idb ui tap 195 422 || true
+          
+          xcrun simctl ui "$UDID" tap 195 422
           sleep 2
           xcrun simctl io "$UDID" screenshot screenshots/02_habit_selection_dialog.png
-          echo "Screenshot 2: habit selection dialog"
-
-          # 3. Tap first habit icon (Drink)
-          idb ui tap 84 442 || true
+          
+          xcrun simctl ui "$UDID" tap 84 442
           sleep 2
           xcrun simctl io "$UDID" screenshot screenshots/03_habit_calendar.png
-          echo "Screenshot 3: habit calendar"
-
-          # 4. Tap a calendar day → status panel
-          idb ui tap 195 206 || true
+          
+          xcrun simctl ui "$UDID" tap 195 206
           sleep 2
           xcrun simctl io "$UDID" screenshot screenshots/04_status_panel.png
-          echo "Screenshot 4: status panel"
-
-          kill $IDB_PID 2>/dev/null || true
+          
           ls -la screenshots/
 
       - name: Upload screenshots
