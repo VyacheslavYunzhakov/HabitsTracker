@@ -132,12 +132,10 @@ jobs:
           sleep 1
 
           if [ ! -f "$DB_PATH" ]; then
-            echo "ERROR: DB was not created within 20 s — app likely crashed."
-            echo "=== Crash logs ==="
-            find ~/Library/Logs/DiagnosticReports -name "HabitsTracker*" 2>/dev/null \
-              | xargs cat 2>/dev/null || echo "No crash logs"
-            echo "=== Container contents ==="
-            find "$DATA_CONTAINER" -type f 2>/dev/null
+            echo "=== App logs ==="
+            xcrun simctl spawn "$UDID" log show \
+              --predicate 'process == "HabitsTracker" OR process == "SpringBoard"' \
+              --last 30s 2>/dev/null | grep -i "error\|crash\|exception\|koin\|room\|kotlin" | tail -50
             exit 1
           fi
 

@@ -4,9 +4,13 @@ import Shared
 @main
 struct iOSApp: App {
     init() {
-        KoinHelperKt.doInitKoin()
+        do {
+            KoinHelperKt.doInitKoin()
+            print("✅ Koin initialized successfully")
+        } catch {
+            print("❌ Koin init failed: \(error)")
+        }
     }
-
     var body: some Scene {
         WindowGroup {
             ContentView()
