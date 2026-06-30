@@ -12,6 +12,7 @@ jobs:
     runs-on: macos-15
     env:
       XCODE_VERSION: '26.1'
+      BUNDLE_ID: 'compose.project.habitstracker'
 
     steps:
       - uses: actions/checkout@v4
@@ -26,8 +27,35 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Install sqlite3
+        run: brew install sqlite3
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      # Boot simulator early so it's ready by the time the build finishes
+      - name: Boot simulator
+        run: |
+          UDID=$(xcrun simctl list devices available --json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devices in data['devices'].items():
+              if '26' in runtime:
+                  for d in devices:
+                      if d['name'] == 'iPhone 16' and d.get('isAvailable', True):
+                          print(d['udid'])
+                          sys.exit(0)
+          sys.exit(1)
+          " 2>/dev/null) || {
+            echo "ERROR: No available iPhone 16 simulator with iOS 26.x found."
+            echo "Available simulators:"
+            xcrun simctl list devices available
+            exit 1
+          }
+          echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID" || true   # ignore if already booted
+          xcrun simctl bootstatus "$UDID" -b
+          echo "Booted simulator: $UDID"
 
       - name: Build shared framework
         run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
@@ -40,7 +68,120 @@ jobs:
           xcodebuild build \
             -project iosApp/iosApp.xcodeproj \
             -scheme iosApp \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.1' \
+            -derivedDataPath ./build \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             IPHONEOS_DEPLOYMENT_TARGET=18.5
+
+      - name: Install app on simulator
+        run: |
+          APP_PATH=$(find ./build -name "HabitsTracker.app" -path "*Debug-iphonesimulator*" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: iosApp.app not found in ./build"
+            find ./build -name "*.app" | head -20
+            exit 1
+          fi
+          echo "Installing: $APP_PATH"
+          xcrun simctl install "${{ env.SIMULATOR_UDID }}" "$APP_PATH"
+
+      - name: Seed database
+        # On iOS, the Room DB is created at version 4 on fresh install with no data.
+        # MIGRATION_2_3 (which seeds Drink/Sport/Cannabis/Run) only runs when upgrading
+        # from v2→v3, not on first install. We launch the app once to trigger DB schema
+        # creation, then inject seed rows directly via sqlite3.
+        run: |
+          BUNDLE_ID="${{ env.BUNDLE_ID }}"
+          UDID="${{ env.SIMULATOR_UDID }}"
+
+          # Launch app once to let Room create the DB schema
+          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+          sleep 4
+          xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
+          sleep 1
+
+          DATA_CONTAINER=$(xcrun simctl get_app_container "$UDID" "$BUNDLE_ID" data)
+          DB_PATH="$DATA_CONTAINER/Documents/habit_tracker.db"
+
+          if [ ! -f "$DB_PATH" ]; then
+            echo "ERROR: DB not found at $DB_PATH"
+            ls "$DATA_CONTAINER/Documents/" || true
+            exit 1
+          fi
+
+          sqlite3 "$DB_PATH" "
+            INSERT OR IGNORE INTO habits (name, iconResName, isAdded) VALUES
+              ('Drink',    'drink_icon_selector',    0),
+              ('Sport',    'sport_icon_selector',    0),
+              ('Cannabis', 'cannabis_icon_selector', 0),
+              ('Run',      'run_icon_selector',      0);
+          "
+          echo "Seeded habits:"
+          sqlite3 "$DB_PATH" "SELECT id, name, isAdded FROM habits;"
+
+      - name: Capture screenshots
+        # All coordinates are logical points on a 390×844pt screen (iPhone 16).
+        # ContentView uses .ignoresSafeArea(), so y=0 is the physical screen top.
+        #
+        # Layout reference:
+        #   Empty screen "+" :  150×150dp square centered at (195, 422)
+        #
+        #   IconSelectionDialog: Card(padding=16) + Column(padding=24) + Row(SpaceEvenly)
+        #     4 habits × 60dp icons, Row width ≈ 310pt
+        #     SpaceEvenly gap = (310 − 4×60) / 5 = 14pt
+        #     First icon center: x = 16(card) + 24(col) + 14(gap) + 30(half) = 84pt
+        #     Dialog centered at y=422; icons row y ≈ 422 + 20(title offset) = 442pt
+        #
+        #   Calendar day grid:
+        #     CalendarTabFrame padding-top=26pt; MonthYearSwitcher height=80pt → grid visible from y=106
+        #     LazyColumn contentPadding-top=16pt → month block at y=42 (card-relative)
+        #     Column padding=16pt → grid at y=116 (screen)
+        #     Week row height=60pt; Week 1 (days 8–14) center ≈ y=206
+        #     7 columns in 294pt; column width ≈ 42pt; col 3 (Thu) center x = 48 + 3×42 + 21 = 195pt
+        #
+        # NOTE: If the CI run date is before the 8th of the month, the tapped day may
+        # be in the future and the status panel won't open. Scroll to the previous month
+        # or adjust y to a later week if needed.
+        run: |
+          mkdir -p screenshots
+          BUNDLE_ID="${{ env.BUNDLE_ID }}"
+          UDID="${{ env.SIMULATOR_UDID }}"
+
+          # Launch app with seeded data
+          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+          sleep 3
+
+          # 1. Main screen — "+" button visible (no habits added yet)
+          xcrun simctl io "$UDID" screenshot screenshots/01_main_screen.png
+          echo "Screenshot 1: main screen"
+
+          # 2. Tap "+" to open habit selection dialog
+          #    Button: 150×150dp square centered at screen center (195, 422)
+          xcrun simctl io "$UDID" tap 195 422
+          sleep 2
+          xcrun simctl io "$UDID" screenshot screenshots/02_habit_selection_dialog.png
+          echo "Screenshot 2: habit selection dialog"
+
+          # 3. Tap first habit icon (Drink) in the dialog
+          #    First icon center: x=84, y=442 (see coordinate notes above)
+          xcrun simctl io "$UDID" tap 84 442
+          sleep 2
+          xcrun simctl io "$UDID" screenshot screenshots/03_habit_calendar.png
+          echo "Screenshot 3: habit calendar screen"
+
+          # 4. Tap a past calendar day to open the status panel
+          #    Thursday of Week 1 (days 8–14): x=195, y=206
+          xcrun simctl io "$UDID" tap 195 206
+          sleep 2
+          xcrun simctl io "$UDID" screenshot screenshots/04_status_panel.png
+          echo "Screenshot 4: status selection panel"
+
+          echo "All screenshots captured."
+          ls -la screenshots/
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-screenshots
+          path: screenshots/
