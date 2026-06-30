@@ -75,11 +75,6 @@ jobs:
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Wait for simulator
-        run: |
-          xcrun simctl bootstatus "${{ env.SIMULATOR_UDID }}" || true
-          sleep 5
-
       - name: Install app
         run: |
           APP_PATH=$(find ./build -name "HabitsTracker.app" -path "*Debug-iphonesimulator*" | head -1)
