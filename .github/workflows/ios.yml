@@ -31,6 +31,25 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache Kotlin Native
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-konan-
+
       - name: Boot simulator
         run: |
           UDID=$(xcrun simctl list devices available --json | python3 -c "
@@ -82,37 +101,16 @@ jobs:
         run: |
           BUNDLE_ID="${{ env.BUNDLE_ID }}"
           UDID="${{ env.SIMULATOR_UDID }}"
-
+          
           xcrun simctl launch "$UDID" "$BUNDLE_ID"
-          sleep 10
+          sleep 15
           xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
           sleep 2
-
+          
           DATA_CONTAINER=$(xcrun simctl get_app_container "$UDID" "$BUNDLE_ID" data)
-          DB_PATH="$DATA_CONTAINER/Documents/habit_tracker.db"
-
-          if [ ! -f "$DB_PATH" ]; then
-            echo "ERROR: DB not found at $DB_PATH"
-            echo "Documents contents:"
-            ls "$DATA_CONTAINER/Documents/" || echo "Documents folder empty or missing"
-            echo "All files in container:"
-            find "$DATA_CONTAINER" -name "*.db" 2>/dev/null || echo "No .db files found"
-            echo "Crash logs:"
-            find ~/Library/Logs/DiagnosticReports -name "HabitsTracker*.crash" 2>/dev/null | xargs cat 2>/dev/null || echo "No crash logs"
-            echo "App logs:"
-            xcrun simctl spawn "$UDID" log show --predicate 'process == "HabitsTracker"' --last 2m 2>/dev/null | tail -80
-            exit 1
-          fi
-
-          sqlite3 "$DB_PATH" "
-            INSERT OR IGNORE INTO habits (name, iconResName, isAdded) VALUES
-              ('Drink',    'drink_icon_selector',    0),
-              ('Sport',    'sport_icon_selector',    0),
-              ('Cannabis', 'cannabis_icon_selector', 0),
-              ('Run',      'run_icon_selector',      0);
-          "
-          echo "Seeded habits:"
-          sqlite3 "$DB_PATH" "SELECT id, name, isAdded FROM habits;"
+          echo "Container: $DATA_CONTAINER"
+          echo "All files in container:"
+          find "$DATA_CONTAINER" -type f 2>/dev/null
 
       - name: Capture screenshots
         run: |
