@@ -32,7 +32,8 @@ jobs:
           brew tap facebook/fb
           brew trust facebook/fb
           brew install idb-companion
-          pip3 install fb-idb --break-system-packages
+          brew install python@3.11
+          /opt/homebrew/opt/python@3.11/bin/python3.11 -m pip install fb-idb --break-system-packages
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -92,23 +93,31 @@ jobs:
           UDID="${{ env.SIMULATOR_UDID }}"
           BUNDLE_ID="${{ env.BUNDLE_ID }}"
           
+          export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
+          
+          idb_companion --udid "$UDID" &
+          IDB_PID=$!
+          sleep 3
+          idb connect "$UDID" || true
+          
           xcrun simctl launch "$UDID" "$BUNDLE_ID"
           sleep 4
           
           xcrun simctl io "$UDID" screenshot screenshots/01_main_screen.png
           
-          xcrun simctl ui "$UDID" tap 195 422
+          idb ui tap 195 422
           sleep 2
           xcrun simctl io "$UDID" screenshot screenshots/02_habit_selection_dialog.png
           
-          xcrun simctl ui "$UDID" tap 84 442
+          idb ui tap 84 442
           sleep 2
           xcrun simctl io "$UDID" screenshot screenshots/03_habit_calendar.png
           
-          xcrun simctl ui "$UDID" tap 195 206
+          idb ui tap 195 206
           sleep 2
           xcrun simctl io "$UDID" screenshot screenshots/04_status_panel.png
           
+          kill $IDB_PID 2>/dev/null || true
           ls -la screenshots/
 
       - name: Upload screenshots
