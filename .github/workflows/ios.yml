@@ -27,9 +27,10 @@ jobs:
 
       - name: Install tools
         run: |
-          brew install sqlite3 idb-companion
+          brew install sqlite3
+          brew tap facebook/fb
+          brew install idb-companion
           pip3 install fb-idb
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
