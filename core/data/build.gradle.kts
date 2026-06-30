@@ -91,6 +91,7 @@ kotlin {
 
         iosMain {
             dependencies {
+                implementation(libs.sqlite.bundled)
             }
         }
 
