@@ -77,7 +77,6 @@ jobs:
           }
           echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
           xcrun simctl boot "$UDID" || true
-          sleep 30
           echo "Booted simulator: $UDID"
 
       - name: Cache shared framework
@@ -113,6 +112,23 @@ jobs:
           echo "Installing: $APP_PATH"
           xcrun simctl install "${{ env.SIMULATOR_UDID }}" "$APP_PATH"
 
+      - name: Wait for simulator to be ready
+        run: |
+          UDID="${{ env.SIMULATOR_UDID }}"
+          echo "Waiting for simulator to be fully booted..."
+          for i in $(seq 1 60); do
+            STATUS=$(xcrun simctl list devices | grep "$UDID" | grep -o "Booted" || true)
+            if [ "$STATUS" = "Booted" ]; then
+              echo "Simulator is booted after ${i}s"
+              # Wait for SpringBoard to be ready
+              xcrun simctl spawn "$UDID" launchctl print system | grep -q "com.apple.SpringBoard" && break || true
+              sleep 1
+            else
+              sleep 1
+            fi
+          done
+          sleep 10
+
       - name: Seed database
         # Launch the app once so Room creates the SQLite schema, then inject seed rows.
         # On a fresh iOS install, the DB is created at version 4 with an empty habits
@@ -145,16 +161,6 @@ jobs:
             find "$DATA_CONTAINER" -type f 2>/dev/null
             exit 1
           fi
-
-          sqlite3 "$DB_PATH" "
-            INSERT OR IGNORE INTO habits (name, iconResName, isAdded) VALUES
-              ('Drink',    'drink_icon_selector',    0),
-              ('Sport',    'sport_icon_selector',    0),
-              ('Cannabis', 'cannabis_icon_selector', 0),
-              ('Run',      'run_icon_selector',      0);
-          "
-          echo "Seeded habits:"
-          sqlite3 "$DB_PATH" "SELECT id, name, isAdded FROM habits;"
 
       - name: Capture screenshots
         # `xcrun simctl io tap` was removed in Xcode 26. Use idb (Meta's iPhone
