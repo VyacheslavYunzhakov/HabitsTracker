@@ -85,19 +85,19 @@ jobs:
         run: |
           UDID="${{ env.SIMULATOR_UDID }}"
           BUNDLE_ID="${{ env.BUNDLE_ID }}"
-
-          # Stream logs in background so we catch the crash even if it's instant
+          
           xcrun simctl spawn "$UDID" log stream --level debug \
             --predicate "processImagePath CONTAINS 'HabitsTracker'" > app_log.txt 2>&1 &
           LOG_PID=$!
           sleep 2
-
-          # --console-pty surfaces the Kotlin uncaught-exception message to stdout
-          timeout 30 xcrun simctl launch --console-pty "$UDID" "$BUNDLE_ID" 2>&1 | tee launch_output.txt || true
-
-          sleep 3
+          
+          # Launch in background, kill it after 30s without needing `timeout`
+          xcrun simctl launch --console-pty "$UDID" "$BUNDLE_ID" > launch_output.txt 2>&1 &
+          LAUNCH_PID=$!
+          sleep 30
+          kill $LAUNCH_PID 2>/dev/null || true
           kill $LOG_PID 2>/dev/null || true
-
+          
           echo "=== launch output ==="
           cat launch_output.txt || true
           echo "=== streamed log (filtered) ==="
