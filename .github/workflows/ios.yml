@@ -83,10 +83,8 @@ jobs:
             ${{ runner.os }}-shared-build-
 
       - name: Build shared framework
-        run: ./gradlew \
-          :shared:linkDebugFrameworkIosSimulatorArm64 \
-          --build-cache \
-          --configuration-cache
+        if: steps.cache-framework.outputs.cache-hit != 'true'
+        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --build-cache --configuration-cache
 
       - name: Build iOS app
         run: |
