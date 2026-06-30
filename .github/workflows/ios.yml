@@ -96,17 +96,20 @@ jobs:
 
           # Launch app once to let Room create the DB schema
           xcrun simctl launch "$UDID" "$BUNDLE_ID"
-          sleep 4
+          sleep 8
           xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
-          sleep 1
-
+          sleep 2
+    
           DATA_CONTAINER=$(xcrun simctl get_app_container "$UDID" "$BUNDLE_ID" data)
           DB_PATH="$DATA_CONTAINER/Documents/habit_tracker.db"
 
           if [ ! -f "$DB_PATH" ]; then
-            echo "ERROR: DB not found at $DB_PATH"
-            ls "$DATA_CONTAINER/Documents/" || true
-            exit 1
+          echo "ERROR: DB not found at $DB_PATH"
+          echo "Documents contents:"
+          ls "$DATA_CONTAINER/Documents/" || echo "Documents folder empty or missing"
+          echo "All files in container:"
+          find "$DATA_CONTAINER" -name "*.db" 2>/dev/null || echo "No .db files found"
+          exit 1
           fi
 
           sqlite3 "$DB_PATH" "
