@@ -1,0 +1,128 @@
+name: iOS Build
+
+on:
+  push:
+    branches: [ main, cmp_ios_desktop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      BUNDLE_ID: 'compose.project.habitstracker'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.1.app
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Install tools
+        run: |
+          brew install sqlite3
+          brew tap facebook/fb
+          brew trust facebook/fb
+          brew install idb-companion
+          brew install python@3.11
+          /opt/homebrew/opt/python@3.11/bin/python3.11 -m pip install fb-idb --break-system-packages
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Cache Kotlin Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: ${{ runner.os }}-konan-${{ hashFiles('**/libs.versions.toml') }}
+          restore-keys: ${{ runner.os }}-konan-
+
+      - name: Boot simulator
+        run: |
+          xcrun simctl shutdown all || true
+          sleep 5
+          UDID=$(xcrun simctl list devices available --json | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devices in data['devices'].items():
+              if '26' in runtime:
+                  for d in devices:
+                      if d['name'] == 'iPhone 16' and d.get('isAvailable', True):
+                          print(d['udid']); sys.exit(0)
+          sys.exit(1)
+          " 2>/dev/null) || { xcrun simctl list devices available; exit 1; }
+          echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID" || true
+          echo "Booted: $UDID"
+
+      - name: Build shared framework
+        run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --build-cache
+
+      - name: Build iOS app
+        run: |
+          xcodebuild build \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.1' \
+            -derivedDataPath ./build \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Wait for simulator
+        run: |
+          xcrun simctl bootstatus "${{ env.SIMULATOR_UDID }}" || true
+          sleep 5
+
+      - name: Install app
+        run: |
+          APP_PATH=$(find ./build -name "HabitsTracker.app" -path "*Debug-iphonesimulator*" | head -1)
+          [ -z "$APP_PATH" ] && { find ./build -name "*.app"; exit 1; }
+          xcrun simctl install "${{ env.SIMULATOR_UDID }}" "$APP_PATH"
+
+      - name: Capture screenshots
+        run: |
+          mkdir -p screenshots
+          UDID="${{ env.SIMULATOR_UDID }}"
+          BUNDLE_ID="${{ env.BUNDLE_ID }}"
+          
+          export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
+          
+          idb_companion --udid "$UDID" &
+          IDB_PID=$!
+          sleep 3
+          idb connect "$UDID" || true
+          
+          xcrun simctl launch "$UDID" "$BUNDLE_ID"
+          sleep 4
+          
+          xcrun simctl io "$UDID" screenshot screenshots/01_main_screen.png
+          
+          idb ui tap 195 422
+          sleep 2
+          xcrun simctl io "$UDID" screenshot screenshots/02_habit_selection_dialog.png
+          
+          idb ui tap 84 442
+          sleep 2
+          xcrun simctl io "$UDID" screenshot screenshots/03_habit_calendar.png
+          
+          idb ui tap 195 206
+          sleep 2
+          xcrun simctl io "$UDID" screenshot screenshots/04_status_panel.png
+          
+          kill $IDB_PID 2>/dev/null || true
+          ls -la screenshots/
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-screenshots
+          path: screenshots/

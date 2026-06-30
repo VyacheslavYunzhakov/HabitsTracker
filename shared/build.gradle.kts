@@ -23,7 +23,9 @@ kotlin {
         }
     }
 
-    val xcfName = "sharedKit"
+    val xcfName = "Shared"
+
+    jvm()
 
     iosArm64 {
         binaries.framework {
@@ -74,6 +76,8 @@ kotlin {
 
         iosMain {
             dependencies {
+                implementation(project(":core:data"))
+                implementation(libs.koin.core)
             }
         }
     }

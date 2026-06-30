@@ -1,7 +1,9 @@
 ﻿package compose.project.data.local
 
+import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
@@ -13,12 +15,27 @@ import androidx.sqlite.execSQL
     exportSchema = false,
 )
 @TypeConverters(HabitTrackerTypeConverters::class)
+@ConstructedBy(HabitTrackerDatabaseConstructor::class)
 abstract class HabitTrackerDatabase : RoomDatabase() {
 
     abstract fun habitDayDao(): HabitDayDao
     abstract fun habitDao(): HabitDao
 
     companion object {
+
+        val SEED_CALLBACK = object : Callback() {
+            override fun onCreate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    """
+                    INSERT OR IGNORE INTO habits (name, iconResName, isAdded) VALUES
+                        ('Drink',    'drink_icon_selector',    0),
+                        ('Sport',    'sport_icon_selector',    0),
+                        ('Cannabis', 'cannabis_icon_selector', 0),
+                        ('Run',      'run_icon_selector',      0)
+                    """.trimIndent()
+                )
+            }
+        }
 
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(connection: SQLiteConnection) {
@@ -168,4 +185,9 @@ abstract class HabitTrackerDatabase : RoomDatabase() {
             }
         }
     }
+}
+
+@Suppress("KotlinNoActualForExpect")
+expect object HabitTrackerDatabaseConstructor : RoomDatabaseConstructor<HabitTrackerDatabase> {
+    override fun initialize(): HabitTrackerDatabase
 }

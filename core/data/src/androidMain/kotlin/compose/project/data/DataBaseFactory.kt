@@ -19,6 +19,7 @@ actual class DatabaseFactory(
                 HabitTrackerDatabase.MIGRATION_2_3,
                 HabitTrackerDatabase.MIGRATION_3_4
             )
+            .addCallback(HabitTrackerDatabase.SEED_CALLBACK)
             .build()
     }
 }

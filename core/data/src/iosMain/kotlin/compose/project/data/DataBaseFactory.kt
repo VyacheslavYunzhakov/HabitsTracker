@@ -1,6 +1,7 @@
 ﻿package compose.project.data
 
 import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import compose.project.data.local.HabitTrackerDatabase
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
@@ -14,6 +15,13 @@ actual class DatabaseFactory {
         return Room.databaseBuilder<HabitTrackerDatabase>(
             name = dbFile
         )
+            .setDriver(BundledSQLiteDriver())
+            .addMigrations(
+                HabitTrackerDatabase.MIGRATION_1_2,
+                HabitTrackerDatabase.MIGRATION_2_3,
+                HabitTrackerDatabase.MIGRATION_3_4
+            )
+            .addCallback(HabitTrackerDatabase.SEED_CALLBACK)
             .build()
     }
 }

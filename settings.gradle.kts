@@ -20,6 +20,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
     }
 }
 
@@ -30,3 +31,4 @@ include(":core:domain")
 include(":core:data")
 include(":shared")
 include(":core:designsystem")
+include(":desktopApp")

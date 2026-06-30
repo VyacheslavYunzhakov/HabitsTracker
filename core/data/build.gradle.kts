@@ -37,7 +37,7 @@ kotlin {
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "dataKit"
 
-
+    jvm()
 
     iosArm64 {
         binaries.framework {
@@ -62,7 +62,8 @@ kotlin {
                 implementation(project(":core:domain"))
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.kotlin.stdlib)
-                implementation(libs.koin.compose)
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.koin.core)
                 implementation(libs.androidx.room.runtime)
                 // Add KMP dependencies here
             }
@@ -90,11 +91,13 @@ kotlin {
 
         iosMain {
             dependencies {
-                // Add iOS-specific dependencies here. This a source set created by Kotlin Gradle
-                // Plugin (KGP) that each specific iOS target (e.g., iosX64) depends on as
-                // part of KMP’s default source set hierarchy. Note that this source set depends
-                // on common by default and will correctly pull the iOS artifacts of any
-                // KMP dependencies declared in commonMain.
+                implementation(libs.sqlite.bundled)
+            }
+        }
+
+        jvmMain {
+            dependencies {
+                implementation(libs.sqlite.bundled)
             }
         }
     }
@@ -105,4 +108,5 @@ dependencies {
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+    add("kspJvm", libs.androidx.room.compiler)
 }

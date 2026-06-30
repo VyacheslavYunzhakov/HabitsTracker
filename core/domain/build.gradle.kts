@@ -33,6 +33,8 @@ kotlin {
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "domainKit"
 
+    jvm()
+
     iosArm64 {
         binaries.framework {
             baseName = xcfName
@@ -54,7 +56,8 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlin.stdlib)
-                implementation(libs.koin.compose)
+                implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.koin.core)
                 implementation(libs.kotlinx.datetime)
                 // Add KMP dependencies here
             }

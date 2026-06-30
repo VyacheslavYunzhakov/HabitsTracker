@@ -41,6 +41,8 @@ kotlin {
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "homeKit"
 
+    jvm()
+
     iosArm64 {
         binaries.framework {
             baseName = xcfName
@@ -66,13 +68,16 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlin.stdlib)
+                implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)
                 implementation(libs.compose.ui)
                 implementation(libs.compose.material3)
                 implementation(libs.compose.components.resources)
                 implementation(libs.voyager.navigator)
-                implementation(libs.koin.compose)
+                implementation(libs.koin.compose.viewmodel)
+                implementation(libs.lifecycle.viewmodel)
+                implementation(libs.lifecycle.runtime.compose)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.liquid)
                 implementation(libs.compose.uiToolingPreview)

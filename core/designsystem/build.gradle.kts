@@ -43,6 +43,8 @@ kotlin {
     // https://developer.android.com/kotlin/multiplatform/migrate
     val xcfName = "designsystemKit"
 
+    jvm()
+
     iosArm64 {
         binaries.framework {
             baseName = xcfName
