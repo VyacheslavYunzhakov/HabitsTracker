@@ -80,7 +80,15 @@ jobs:
           sleep 30
           echo "Booted simulator: $UDID"
 
+      - name: Cache shared framework
+        id: cache-framework
+        uses: actions/cache@v4
+        with:
+          path: shared/build/bin/iosSimulatorArm64/debugFramework
+          key: ${{ runner.os }}-shared-framework-${{ hashFiles('shared/src/**/*.kt', 'shared/build.gradle.kts', 'gradle/libs.versions.toml') }}
+
       - name: Build shared framework
+        if: steps.cache-framework.outputs.cache-hit != 'true'
         run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
 
       - name: Build iOS app

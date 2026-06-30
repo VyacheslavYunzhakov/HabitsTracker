@@ -14,6 +14,7 @@ actual class DatabaseFactory {
         return Room.databaseBuilder<HabitTrackerDatabase>(
             name = dbFile
         )
+            .fallbackToDestructiveMigration(true)
             .build()
     }
 }
