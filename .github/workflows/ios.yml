@@ -27,11 +27,15 @@ jobs:
       - name: Build shared framework
         run: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
 
+      - name: List simulators
+        run: xcrun simctl list devices available
+
       - name: Build iOS app
         run: |
           xcodebuild build \
             -project iosApp/iosApp.xcodeproj \
             -scheme iosApp \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
             -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            IPHONEOS_DEPLOYMENT_TARGET=18.5
