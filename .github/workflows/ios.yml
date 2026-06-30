@@ -31,7 +31,7 @@ jobs:
           brew tap facebook/fb
           brew trust facebook/fb
           brew install idb-companion
-          pip3 install fb-idb
+          pip3 install fb-idb --break-system-packages
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
